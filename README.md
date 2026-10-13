@@ -17,6 +17,9 @@ page around it: in "app only" mode WordPress asks for the username first and
 falls back to the password form for an account with no device, while Drupal
 hides the password form and keeps `?thessley_password=1` as the way back to it.
 
+Both servers can also verify that a key lives in a **TPM 2.0 chip** (optional, see the end of
+`PROTOCOL.md`); the Intel root certificate for that ships next to each module in `tpm-roots/`.
+
 Start with `PROTOCOL.md`, then `wordpress/passkey-login/class-crypto.php`
 (the signed string and verification) and `module.php` (the endpoints). The
 Drupal module is the cleaner, self-contained version of the same logic.

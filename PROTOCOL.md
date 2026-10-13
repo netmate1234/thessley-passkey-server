@@ -87,6 +87,38 @@ app may see: `thessley_expired` (409), `thessley_already_resolved` (409),
 4. The attestation chain (Android Key Attestation) is verified for visibility
    only (`software` / `tee` / `strongbox`); enrolment is never rejected on it.
 
+## Optional: TPM hardware attestation
+
+A client whose signing key lives in a **TPM 2.0** chip can prove it, and the site then records the device
+as `tpm` ("TPM 2.0 hardware") instead of unverified. It adds one endpoint and one optional field; nothing
+else changes, and a failed proof **never rejects an enrolment**.
+
+1. `POST /enroll/{id}/tpm-challenge` with
+   `{ "ek_certs": [base64 DER, leaf first], "ak_public": base64 TPMT_PUBLIC }`.
+   `ek_certs` is the chip's endorsement-key (EK) certificate and its intermediates. `ak_public` is a fresh
+   **attestation key** (AK): ECC P-256, ECDSA/SHA-256, restricted signing, fixed to the chip.
+   The site verifies the EK chain against its trusted manufacturer roots and answers
+   `{ "credential_blob": base64 TPM2B_ID_OBJECT, "secret": base64 TPM2B_ENCRYPTED_SECRET }`:
+   a random secret encrypted to the EK and bound to the AK's name (TPM2_MakeCredential).
+2. The client runs TPM2_ActivateCredential (only a chip holding both the EK and the AK can) and
+   TPM2_Certify: the AK certifies the signing key with qualifying data = the enrolment `nonce` (its UTF-8 bytes).
+3. `POST /enroll/{id}/respond` as usual, plus
+   ```
+   "tpm": { "ak_public": b64 TPMT_PUBLIC, "activated_secret": b64, "certify_info": b64 TPMS_ATTEST,
+            "certify_signature": b64 TPMT_SIGNATURE, "key_public": b64 TPMT_PUBLIC of the signing key }
+   ```
+   The response gains `"attestation": "tpm"` when it verified (otherwise `""`).
+
+The site checks: the EK certificate chains to a trusted root (EK key ECC P-256); the activation secret
+comes back (so the AK and the EK are in the same chip); the AK is a restricted, fixed signing key; the
+certification signature verifies, is bound to this enrolment's nonce and names the submitted key; and the
+certified key is `fixedTPM`, `fixedParent`, `sensitiveDataOrigin`, a plain (unrestricted) signing key.
+
+Not checked: revocation lists and firmware security. Trust anchors are PEM files in `tpm-roots/` next to
+the module (Intel's On-Die CA root ships; add a maker's root to trust that maker). Reference client:
+the Thessley Passkey desktop app for Linux. Reference verifier: `wordpress/passkey-login/class-tpm.php` and
+`drupal/thessley_passkey/src/Tpm.php`.
+
 ## Login rules the server enforces
 
 * A request is single-use and short-lived (120 s). The first valid
