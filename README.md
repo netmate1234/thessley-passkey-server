@@ -12,6 +12,11 @@ Security Hardening WordPress plugin and its Drupal port.
 | `drupal/thessley_passkey/` | Standalone Drupal 10.3 / 11 module (see its own README). |
 | `tests/` | `passkey-login*-checks.php` (WordPress, run with WP-CLI on a dev site) and `drupal-passkey-checks.php` (end-to-end over HTTP against a Drupal **sandbox**). Never run these against a live site. |
 
+The two servers behave the same for the app. They differ only in the login
+page around it: in "app only" mode WordPress asks for the username first and
+falls back to the password form for an account with no device, while Drupal
+hides the password form and keeps `?thessley_password=1` as the way back to it.
+
 Start with `PROTOCOL.md`, then `wordpress/passkey-login/class-crypto.php`
 (the signed string and verification) and `module.php` (the endpoints). The
 Drupal module is the cleaner, self-contained version of the same logic.

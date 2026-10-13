@@ -62,6 +62,12 @@ WordPress fallback form the Android app uses everywhere:
 `2fa` requests use the same `/login/{id}/status` and `/login/{id}/respond`
 with `type=2fa` in the signed string.
 
+Browser-side extras the app never sees or needs: the WordPress server also
+returns `has_device` from `login/start` in app-only mode (so the login page can
+show the password form instead of a QR for an account with no phone yet; an
+unknown username looks the same as "no device", so it reveals nothing). A client
+should ignore response fields it does not know.
+
 Errors: HTTP status 4xx and a body `{code, message, data: {status}}`. Codes the
 app may see: `thessley_expired` (409), `thessley_already_resolved` (409),
 `thessley_stale` (401, clock off), `thessley_unknown_device` (401),
