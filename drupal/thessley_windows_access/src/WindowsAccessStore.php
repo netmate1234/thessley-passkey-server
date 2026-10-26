@@ -377,6 +377,21 @@ final class WindowsAccessStore {
   }
 
   /**
+   * Returns inventory for one Drupal user, never another user's bindings.
+   */
+  public function accountInventoryForUser(int $uid): array {
+    $query = $this->db->select('thessley_win_accounts', 'a')
+      ->fields('a', ['id', 'machine_id', 'username', 'status', 'last_seen', 'revoked'])
+      ->condition('a.uid', $uid);
+    $query->addField('m', 'hostname');
+    $query->addField('g', 'group_sid_hash');
+    $query->addField('g', 'group_name');
+    $query->leftJoin('thessley_win_machines', 'm', 'm.machine_id = a.machine_id');
+    $query->leftJoin('thessley_win_account_groups', 'g', 'g.account_id = a.id');
+    return $query->orderBy('m.hostname')->orderBy('a.username')->orderBy('g.group_name')->execute()->fetchAll();
+  }
+
+  /**
    * Lists active resources for the policy editor.
    */
   public function resources(): array {

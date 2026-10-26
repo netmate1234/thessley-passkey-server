@@ -56,6 +56,23 @@ final class AdminLandingController extends ControllerBase {
       ];
     }
 
+    if ($this->currentUser()->isAuthenticated()) {
+      $cards['my_report'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['thessley-windows-access-card']],
+        'title' => [
+          '#type' => 'html_tag',
+          '#tag' => 'h2',
+          '#value' => $this->t('Your linked data'),
+        ],
+        'description' => [
+          '#type' => 'item',
+          '#markup' => $this->t('View only the Windows accounts, phone count, PC reports, and Drupal groups linked to your sign-in.'),
+        ],
+        'link' => Link::createFromRoute($this->t('Open my report'), 'thessley_windows_access.my_report')->toRenderable(),
+      ];
+    }
+
     return [
       '#attached' => ['library' => ['thessley_windows_access/admin']],
       'intro' => [

@@ -14,6 +14,14 @@ thessley_windows_access.dashboard:
   requirements:
     _permission: 'access content'
 
+thessley_windows_access.my_report:
+  path: '/my-windows-access'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\MyAccessReportController::overview'
+    _title: 'My Windows Access report'
+  requirements:
+    _permission: 'authenticated user'
+
 thessley_windows_access.enroll:
   path: '/admin/config/people/thessley-windows-access/enroll'
   defaults:
