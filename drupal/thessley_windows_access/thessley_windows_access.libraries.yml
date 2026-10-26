@@ -1,5 +1,5 @@
 admin:
-  version: 1.1
+  version: 1.2
   js:
     js/admin.js: {}
   css:

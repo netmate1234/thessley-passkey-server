@@ -57,16 +57,20 @@ final class InventoryController extends ControllerBase {
       }
     }
 
-    $rows = [];
+    $cards = [];
     foreach ($accounts as $account) {
-      $rows[] = [
-        ['data' => ['#plain_text' => $account['machine']]],
-        ['data' => ['#plain_text' => $account['username']]],
-        ['data' => ['#plain_text' => (string) $account['identity']]],
-        ['data' => ['#plain_text' => (string) $account['status']]],
-        ['data' => ['#plain_text' => (string) $account['last_seen']]],
-        $account['phones'] ? ['data' => ['#theme' => 'item_list', '#items' => $account['phones']]] : ['data' => ['#plain_text' => (string) $this->t('No enrolled phone')]],
-        ['data' => ['#plain_text' => $account['groups'] ? implode("\n", $account['groups']) : (string) $this->t('No group report yet')]],
+      $cards[] = [
+        'title' => $account['machine'],
+        'fields' => [
+          $this->t('Windows account') => $account['username'],
+          $this->t('Drupal user') => (string) $account['identity'],
+          $this->t('Binding') => (string) $account['status'],
+          $this->t('Last report') => (string) $account['last_seen'],
+          $this->t('Phone credentials') => $account['phones']
+            ? ['#theme' => 'item_list', '#items' => $account['phones']]
+            : ['#plain_text' => $this->t('No enrolled phone')],
+          $this->t('Reported Windows groups') => $account['groups'] ? implode(', ', $account['groups']) : (string) $this->t('No group report yet'),
+        ],
       ];
     }
 
@@ -83,22 +87,39 @@ final class InventoryController extends ControllerBase {
       'intro' => [
         '#markup' => $this->t('PC-reported Windows groups are inventory. Drupal roles and resource grants control Thessley access. The endpoint agent changes membership only in explicitly granted supported groups: Administrators, Remote Desktop Users, Event Log Readers, and Remote Management Users.'),
       ],
-      'inventory' => [
-        '#type' => 'table',
-        '#header' => [
-          $this->t('Computer'),
-          $this->t('Windows account'),
-          $this->t('Drupal user'),
-          $this->t('Binding'),
-          $this->t('Last report'),
-          $this->t('Phone credentials'),
-          $this->t('Reported Windows groups'),
-        ],
-        '#rows' => $rows,
-        '#empty' => $this->t('No Windows accounts have been enrolled.'),
-        '#attributes' => ['class' => ['responsive-enabled']],
-      ],
+      'inventory' => $this->buildCards($cards, $this->t('No Windows accounts have been enrolled.')),
     ];
+  }
+
+  /** Builds a responsive account inventory card grid. */
+  private function buildCards(array $records, string $empty_message): array {
+    $build = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['thessley-record-grid', 'thessley-inventory-grid']],
+    ];
+    if (!$records) {
+      $build['empty'] = ['#type' => 'item', '#markup' => $empty_message];
+      return $build;
+    }
+    foreach ($records as $index => $record) {
+      $card = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['thessley-record-card', 'thessley-inventory-card']],
+        'title' => ['#plain_text' => $record['title'], '#wrapper_attributes' => ['class' => ['thessley-record-card-title']]],
+        'fields' => ['#type' => 'container', '#attributes' => ['class' => ['thessley-record-fields']]],
+      ];
+      $field_index = 0;
+      foreach ($record['fields'] as $label => $value) {
+        $card['fields']['field_' . $field_index++] = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['thessley-record-field']],
+          'label' => ['#plain_text' => (string) $label],
+          'value' => is_array($value) ? $value : ['#plain_text' => (string) $value],
+        ];
+      }
+      $build['card_' . $index] = $card;
+    }
+    return $build;
   }
 
 }

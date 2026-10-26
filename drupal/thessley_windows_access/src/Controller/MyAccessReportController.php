@@ -51,16 +51,17 @@ final class MyAccessReportController extends ControllerBase {
       }
     }
 
-    $rows = [];
+    $account_cards = [];
     foreach ($accounts as $account) {
       $groups = array_values(array_unique($account['groups']));
-      $rows[] = [
-        ['data' => ['#plain_text' => $account['computer']]],
-        ['data' => ['#plain_text' => $account['username']]],
-        ['data' => ['#plain_text' => $account['status']]],
-        ['data' => ['#plain_text' => (string) $account['phones']]],
-        ['data' => ['#plain_text' => $account['last_seen']]],
-        ['data' => ['#plain_text' => $groups ? implode(', ', $groups) : (string) $this->t('No group report yet')]],
+      $account_cards[] = [
+        'title' => $account['computer'] . ' · ' . $account['username'],
+        'fields' => [
+          $this->t('Status') => $account['status'],
+          $this->t('Active phones') => (string) $account['phones'],
+          $this->t('Last PC report') => $account['last_seen'],
+          $this->t('Reported Windows groups') => $groups ? implode(', ', $groups) : (string) $this->t('No group report yet'),
+        ],
       ];
     }
 
@@ -71,12 +72,13 @@ final class MyAccessReportController extends ControllerBase {
       $decision = $event->event === 'phone_login_approved'
         ? $this->t('Phone approved')
         : $this->t('Phone denied');
-      $activity_rows[] = [
-        ['data' => ['#plain_text' => \Drupal::service('date.formatter')->format((int) $event->created, 'short')]],
-        ['data' => ['#plain_text' => (string) ($details['computer'] ?? $this->t('Unknown computer'))]],
-        ['data' => ['#plain_text' => (string) ($details['username'] ?? '')]],
-        ['data' => ['#plain_text' => (string) ($details['phone'] ?? '')]],
-        ['data' => ['#plain_text' => (string) $decision]],
+      $activity_cards[] = [
+        'title' => \Drupal::service('date.formatter')->format((int) $event->created, 'short') . ' · ' . (string) ($details['computer'] ?? $this->t('Unknown computer')),
+        'fields' => [
+          $this->t('Windows account') => (string) ($details['username'] ?? ''),
+          $this->t('Phone') => (string) ($details['phone'] ?? ''),
+          $this->t('Phone decision') => (string) $decision,
+        ],
       ];
     }
 
@@ -104,10 +106,12 @@ final class MyAccessReportController extends ControllerBase {
         [$resource_id, $action] = array_pad(explode(':', $grant, 2), 2, '');
         $resource_id = (int) $resource_id;
         if (isset($resources[$resource_id], $action_labels[$action])) {
-          $access_rows[] = [
-            ['data' => ['#plain_text' => $role->label()]],
-            ['data' => ['#plain_text' => $resources[$resource_id]]],
-            ['data' => ['#plain_text' => (string) $action_labels[$action]]],
+          $access_cards[] = [
+            'title' => $resources[$resource_id],
+            'fields' => [
+              $this->t('Group') => $role->label(),
+              $this->t('Right') => (string) $action_labels[$action],
+            ],
           ];
         }
       }
@@ -131,32 +135,13 @@ final class MyAccessReportController extends ControllerBase {
         '#tag' => 'h2',
         '#value' => $this->t('Your access rights'),
       ],
-      'rights' => [
-        '#type' => 'table',
-        '#header' => [$this->t('Group'), $this->t('Computer or resource'), $this->t('Right')],
-        '#rows' => $access_rows,
-        '#empty' => $this->t('No Windows or resource rights are assigned to your groups.'),
-        '#attributes' => ['class' => ['responsive-enabled']],
-      ],
+      'rights' => $this->buildCards($access_cards ?? [], $this->t('No Windows or resource rights are assigned to your groups.')),
       'accounts_title' => [
         '#type' => 'html_tag',
         '#tag' => 'h2',
         '#value' => $this->t('Your Windows accounts'),
       ],
-      'accounts' => [
-        '#type' => 'table',
-        '#header' => [
-          $this->t('Computer'),
-          $this->t('Windows account'),
-          $this->t('Status'),
-          $this->t('Active phones'),
-          $this->t('Last PC report'),
-          $this->t('Reported Windows groups'),
-        ],
-        '#rows' => $rows,
-        '#empty' => $this->t('No Windows accounts are linked to your Drupal user.'),
-        '#attributes' => ['class' => ['responsive-enabled']],
-      ],
+      'accounts' => $this->buildCards($account_cards, $this->t('No Windows accounts are linked to your Drupal user.')),
       'activity_title' => [
         '#type' => 'html_tag',
         '#tag' => 'h2',
@@ -166,20 +151,39 @@ final class MyAccessReportController extends ControllerBase {
         '#type' => 'item',
         '#markup' => $this->t('These entries show whether the phone approved or denied a request. They do not confirm that Windows completed sign-in.'),
       ],
-      'activity' => [
-        '#type' => 'table',
-        '#header' => [
-          $this->t('Time'),
-          $this->t('Computer'),
-          $this->t('Windows account'),
-          $this->t('Phone'),
-          $this->t('Phone decision'),
-        ],
-        '#rows' => $activity_rows,
-        '#empty' => $this->t('No phone login decisions have been recorded yet.'),
-        '#attributes' => ['class' => ['responsive-enabled']],
-      ],
+      'activity' => $this->buildCards($activity_cards ?? [], $this->t('No phone login decisions have been recorded yet.')),
     ];
+  }
+
+  /** Builds mobile-friendly cards with semantic label/value pairs. */
+  private function buildCards(array $records, string $empty_message): array {
+    $build = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['thessley-record-grid']],
+    ];
+    if (!$records) {
+      $build['empty'] = ['#type' => 'item', '#markup' => $empty_message];
+      return $build;
+    }
+    foreach ($records as $index => $record) {
+      $card = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['thessley-record-card']],
+        'title' => ['#plain_text' => $record['title'], '#wrapper_attributes' => ['class' => ['thessley-record-card-title']]],
+        'fields' => ['#type' => 'container', '#attributes' => ['class' => ['thessley-record-fields']]],
+      ];
+      $field_index = 0;
+      foreach ($record['fields'] as $label => $value) {
+        $card['fields']['field_' . $field_index++] = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['thessley-record-field']],
+          'label' => ['#plain_text' => (string) $label],
+          'value' => ['#plain_text' => (string) $value],
+        ];
+      }
+      $build['card_' . $index] = $card;
+    }
+    return $build;
   }
 
 }
