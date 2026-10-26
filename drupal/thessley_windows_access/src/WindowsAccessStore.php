@@ -81,7 +81,47 @@ final class WindowsAccessStore {
       return NULL;
     }
     $this->createMachine($machine_id, $hostname);
-    $account_id = $this->createAccount($machine_id, $sid_hash, $username, $username, (int) $pairing->uid, $public_key, $principal_type, $authority);
+    // A successful PC pairing creates the pending account before the phone
+    // approves its enrollment QR. If that QR is clipped, expires, or is
+    // dismissed, the Windows helper keeps the same SID-scoped key and retries
+    // with a fresh pairing code. Reuse that pending account and invalidate its
+    // previous enrollment request instead of inserting the unique machine/SID
+    // row a second time.
+    $existing_account = $this->db->select('thessley_win_accounts', 'a')
+      ->fields('a', ['id', 'uid', 'username', 'principal_type', 'authority', 'public_key', 'status', 'revoked'])
+      ->condition('machine_id', $machine_id)
+      ->condition('sid_hash', $sid_hash)
+      ->forUpdate()
+      ->execute()
+      ->fetchObject();
+    if ($existing_account) {
+      if ($existing_account->status !== 'pending' || $existing_account->revoked !== NULL) {
+        throw new \DomainException('This Windows account already has an enrollment on this PC. Manage its existing enrollment in Drupal instead.');
+      }
+      if ((int) $existing_account->uid !== (int) $pairing->uid) {
+        throw new \DomainException('This pending Windows account is already linked to a different Drupal identity.');
+      }
+      if ($existing_account->username !== $username
+        || $existing_account->principal_type !== $principal_type
+        || $existing_account->authority !== $authority
+        || !is_string($existing_account->public_key)
+        || !hash_equals($existing_account->public_key, $public_key)) {
+        throw new \DomainException('The pending Windows account does not match this PC key and account scope. Keep its existing key and ask an administrator to review the pending record.');
+      }
+      $account_id = (int) $existing_account->id;
+      // A previous enrollment QR may still be open on the phone. Expire it
+      // before issuing the replacement so only the newest QR can enroll.
+      $this->db->update('thessley_win_requests')
+        ->fields(['expires' => $now - 1])
+        ->condition('account_id', $account_id)
+        ->condition('type', 'enroll')
+        ->condition('status', 'pending')
+        ->condition('expires', $now, '>=')
+        ->execute();
+    }
+    else {
+      $account_id = $this->createAccount($machine_id, $sid_hash, $username, $username, (int) $pairing->uid, $public_key, $principal_type, $authority);
+    }
     $request = $this->createRequest($account_id, 'enroll', 300, NULL, $protocol_version, 'enrollment');
     $this->db->update('thessley_win_pairings')
       ->fields(['status' => 'used', 'used' => $now])

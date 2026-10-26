@@ -162,6 +162,9 @@ final class AgentApiController extends ControllerBase {
     try {
       $result = $this->store->completePairing($code, $ip, $machine_id, $hostname, $username, $principal_id, $public_key, $scope, $authority, 2);
     }
+    catch (\DomainException $e) {
+      return $this->reply(['result' => 'error', 'message' => $e->getMessage()], 409);
+    }
     catch (\Throwable $e) {
       $this->getLogger('thessley_windows_access')->warning('Windows v2 pairing failed: @type', ['@type' => get_class($e)]);
       return $this->reply(['result' => 'error', 'message' => 'The PC could not be enrolled. Check the pairing details and try again.'], 409);
