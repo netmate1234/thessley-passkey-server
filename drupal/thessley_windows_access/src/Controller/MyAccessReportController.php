@@ -57,10 +57,10 @@ final class MyAccessReportController extends ControllerBase {
       $account_cards[] = [
         'title' => $account['computer'] . ' · ' . $account['username'],
         'fields' => [
-          $this->t('Status') => $account['status'],
-          $this->t('Active phones') => (string) $account['phones'],
-          $this->t('Last PC report') => $account['last_seen'],
-          $this->t('Reported Windows groups') => $groups ? implode(', ', $groups) : (string) $this->t('No group report yet'),
+          (string) $this->t('Status') => $account['status'],
+          (string) $this->t('Active phones') => (string) $account['phones'],
+          (string) $this->t('Last PC report') => $account['last_seen'],
+          (string) $this->t('Reported Windows groups') => $groups ? implode(', ', $groups) : (string) $this->t('No group report yet'),
         ],
       ];
     }
@@ -75,9 +75,9 @@ final class MyAccessReportController extends ControllerBase {
       $activity_cards[] = [
         'title' => \Drupal::service('date.formatter')->format((int) $event->created, 'short') . ' · ' . (string) ($details['computer'] ?? $this->t('Unknown computer')),
         'fields' => [
-          $this->t('Windows account') => (string) ($details['username'] ?? ''),
-          $this->t('Phone') => (string) ($details['phone'] ?? ''),
-          $this->t('Phone decision') => (string) $decision,
+          (string) $this->t('Windows account') => (string) ($details['username'] ?? ''),
+          (string) $this->t('Phone') => (string) ($details['phone'] ?? ''),
+          (string) $this->t('Phone decision') => (string) $decision,
         ],
       ];
     }
@@ -109,8 +109,8 @@ final class MyAccessReportController extends ControllerBase {
           $access_cards[] = [
             'title' => $resources[$resource_id],
             'fields' => [
-              $this->t('Group') => $role->label(),
-              $this->t('Right') => (string) $action_labels[$action],
+              (string) $this->t('Group') => $role->label(),
+              (string) $this->t('Right') => (string) $action_labels[$action],
             ],
           ];
         }

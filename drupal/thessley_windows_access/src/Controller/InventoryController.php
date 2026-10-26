@@ -62,14 +62,14 @@ final class InventoryController extends ControllerBase {
       $cards[] = [
         'title' => $account['machine'],
         'fields' => [
-          $this->t('Windows account') => $account['username'],
-          $this->t('Drupal user') => (string) $account['identity'],
-          $this->t('Binding') => (string) $account['status'],
-          $this->t('Last report') => (string) $account['last_seen'],
-          $this->t('Phone credentials') => $account['phones']
+          (string) $this->t('Windows account') => $account['username'],
+          (string) $this->t('Drupal user') => (string) $account['identity'],
+          (string) $this->t('Binding') => (string) $account['status'],
+          (string) $this->t('Last report') => (string) $account['last_seen'],
+          (string) $this->t('Phone credentials') => $account['phones']
             ? ['#theme' => 'item_list', '#items' => $account['phones']]
             : ['#plain_text' => $this->t('No enrolled phone')],
-          $this->t('Reported Windows groups') => $account['groups'] ? implode(', ', $account['groups']) : (string) $this->t('No group report yet'),
+          (string) $this->t('Reported Windows groups') => $account['groups'] ? implode(', ', $account['groups']) : (string) $this->t('No group report yet'),
         ],
       ];
     }
