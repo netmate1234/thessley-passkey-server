@@ -28,6 +28,13 @@ checkboxes, and assign each group's computer/resource rights. Changes are
 audited. Drupal administrator accounts are excluded from that editor so they
 cannot accidentally lose site administration access.
 
+Signed-in users see **Your linked data** directly on the Windows Access landing
+page. It lists only Windows account bindings owned by their Drupal user, their
+role groups and effective resource rights, active enrolled-phone count, and
+Windows local groups last reported by their PCs. The same report is available
+at `/my-windows-access`, which requires an authenticated Drupal session; it
+does not expose another user's account or device records.
+
 The module settings page is `/admin/config/people/thessley-windows-access`.
 Set the HTTPS PAM server URL and its SHA-256 leaf-certificate fingerprint.
 Role grants are managed separately at the Groups and resources page.
