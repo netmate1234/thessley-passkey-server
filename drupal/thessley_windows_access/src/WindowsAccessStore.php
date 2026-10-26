@@ -507,6 +507,22 @@ final class WindowsAccessStore {
       ->execute();
   }
 
+  /** Returns recent phone login decisions belonging to one Drupal identity. */
+  public function recentLoginDecisions(int $uid, int $limit = 20): array {
+    if ($uid <= 0) {
+      return [];
+    }
+    $limit = max(1, min(50, $limit));
+    return $this->db->select('thessley_win_audit', 'a')
+      ->fields('a', ['event', 'details', 'created'])
+      ->condition('actor_uid', $uid)
+      ->condition('event', ['phone_login_approved', 'phone_login_denied'], 'IN')
+      ->orderBy('created', 'DESC')
+      ->range(0, $limit)
+      ->execute()
+      ->fetchAll();
+  }
+
   public function pruneExpiredRequests(): void {
     $this->db->delete('thessley_win_requests')
       ->condition('expires', $this->time->getRequestTime(), '<')

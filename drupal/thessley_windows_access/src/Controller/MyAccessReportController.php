@@ -64,6 +64,22 @@ final class MyAccessReportController extends ControllerBase {
       ];
     }
 
+    $activity_rows = [];
+    foreach ($this->store->recentLoginDecisions($uid, 20) as $event) {
+      $details = json_decode((string) $event->details, TRUE);
+      $details = is_array($details) ? $details : [];
+      $decision = $event->event === 'phone_login_approved'
+        ? $this->t('Phone approved')
+        : $this->t('Phone denied');
+      $activity_rows[] = [
+        ['data' => ['#plain_text' => \Drupal::service('date.formatter')->format((int) $event->created, 'short')]],
+        ['data' => ['#plain_text' => (string) ($details['computer'] ?? $this->t('Unknown computer'))]],
+        ['data' => ['#plain_text' => (string) ($details['username'] ?? '')]],
+        ['data' => ['#plain_text' => (string) ($details['phone'] ?? '')]],
+        ['data' => ['#plain_text' => (string) $decision]],
+      ];
+    }
+
     $roles = $this->currentUser()->getRoles(TRUE);
     $role_labels = [];
     $access_rows = [];
@@ -139,6 +155,28 @@ final class MyAccessReportController extends ControllerBase {
         ],
         '#rows' => $rows,
         '#empty' => $this->t('No Windows accounts are linked to your Drupal user.'),
+        '#attributes' => ['class' => ['responsive-enabled']],
+      ],
+      'activity_title' => [
+        '#type' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => $this->t('Recent phone login activity'),
+      ],
+      'activity_note' => [
+        '#type' => 'item',
+        '#markup' => $this->t('These entries show whether the phone approved or denied a request. They do not confirm that Windows completed sign-in.'),
+      ],
+      'activity' => [
+        '#type' => 'table',
+        '#header' => [
+          $this->t('Time'),
+          $this->t('Computer'),
+          $this->t('Windows account'),
+          $this->t('Phone'),
+          $this->t('Phone decision'),
+        ],
+        '#rows' => $activity_rows,
+        '#empty' => $this->t('No phone login decisions have been recorded yet.'),
         '#attributes' => ['class' => ['responsive-enabled']],
       ],
     ];

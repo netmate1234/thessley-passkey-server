@@ -182,6 +182,28 @@ final class PamApiController extends ControllerBase {
     if ($action === 'approve') {
       $this->store->touchPhone((int) $phone->id);
     }
+    if ($type === 'login') {
+      $machine = $this->store->machine((string) $account->machine_id);
+      try {
+        $this->store->audit(
+          (int) $account->uid,
+          $action === 'approve' ? 'phone_login_approved' : 'phone_login_denied',
+          'windows_account:' . (int) $account->id,
+          [
+            'computer' => (string) ($machine->hostname ?? $account->machine_id),
+            'username' => (string) $account->username,
+            'phone' => (string) $phone->label,
+          ],
+        );
+      }
+      catch (\Throwable $e) {
+        // An audit-storage issue must not turn a recorded phone decision into
+        // an ambiguous failure for the phone or the waiting Windows client.
+        \Drupal::logger('thessley_windows_access')->error('Could not record a Windows phone-login decision: @message', [
+          '@message' => $e->getMessage(),
+        ]);
+      }
+    }
     return $this->reply(['result' => 'ok']);
   }
 

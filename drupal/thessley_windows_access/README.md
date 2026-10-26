@@ -33,9 +33,11 @@ cannot accidentally lose site administration access.
 Signed-in users see **Your linked data** directly on the Windows Access landing
 page. It lists only Windows account bindings owned by their Drupal user, their
 role groups and effective resource rights, active enrolled-phone count, and
-Windows local groups last reported by their PCs. The same report is available
-at `/my-windows-access`, which requires an authenticated Drupal session; it
-does not expose another user's account or device records.
+Windows local groups last reported by their PCs. It also lists recent phone
+approve/deny decisions; those records do not claim that Windows completed the
+sign-in. The same report is available at `/my-windows-access`, which requires
+an authenticated Drupal session; it does not expose another user's account or
+device records.
 
 The module settings page is `/admin/config/people/thessley-windows-access`.
 Set the HTTPS PAM server URL and its SHA-256 leaf-certificate fingerprint.
