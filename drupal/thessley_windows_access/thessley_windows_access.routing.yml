@@ -20,7 +20,7 @@ thessley_windows_access.my_report:
     _controller: '\Drupal\thessley_windows_access\Controller\MyAccessReportController::overview'
     _title: 'My Windows Access report'
   requirements:
-    _permission: 'authenticated user'
+    _user_is_logged_in: 'TRUE'
 
 thessley_windows_access.enroll:
   path: '/admin/config/people/thessley-windows-access/enroll'
