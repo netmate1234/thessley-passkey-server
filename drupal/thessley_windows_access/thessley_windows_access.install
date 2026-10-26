@@ -163,6 +163,11 @@ function thessley_windows_access_schema(): array {
  */
 function thessley_windows_access_install(): void {
   $roles = \Drupal::entityTypeManager()->getStorage('user_role');
+  $administrator = $roles->load('administrator');
+  if ($administrator && !$administrator->hasPermission('administer thessley windows access')) {
+    $administrator->grantPermission('administer thessley windows access');
+    $administrator->save();
+  }
   $role = $roles->load('windows_administrators');
   if (!$role) {
     $role = \Drupal\user\Entity\Role::create([
@@ -183,13 +188,19 @@ function thessley_windows_access_install(): void {
   }
   $db = \Drupal::database();
   $db->merge('thessley_win_resources')
-    ->key(['machine_name' => 'all_windows'])
+    ->key('machine_name', 'all_windows')
     ->fields([
       'label' => 'All enrolled Windows computers',
       'type' => 'computer_group',
       'status' => 'active',
     ])
-    ->insertFields(['created' => \Drupal::time()->getRequestTime()])
+    ->insertFields([
+      'machine_name' => 'all_windows',
+      'label' => 'All enrolled Windows computers',
+      'type' => 'computer_group',
+      'status' => 'active',
+      'created' => \Drupal::time()->getRequestTime(),
+    ])
     ->execute();
   $resource_id = (int) $db->select('thessley_win_resources', 'r')
     ->fields('r', ['id'])
@@ -198,13 +209,17 @@ function thessley_windows_access_install(): void {
     ->fetchField();
   foreach (['windows.login', 'windows.local_admin'] as $action) {
     $db->merge('thessley_win_grants')
-      ->key([
+      ->key('role_id', 'windows_administrators')
+      ->key('resource_id', (int) $resource_id)
+      ->key('action', $action)
+      ->fields(['changed_by' => 1])
+      ->insertFields([
         'role_id' => 'windows_administrators',
         'resource_id' => (int) $resource_id,
         'action' => $action,
+        'changed_by' => 1,
+        'created' => \Drupal::time()->getRequestTime(),
       ])
-      ->fields(['changed_by' => 1])
-      ->insertFields(['created' => \Drupal::time()->getRequestTime()])
       ->execute();
   }
 

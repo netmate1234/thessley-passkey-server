@@ -35,12 +35,12 @@ passkey signatures. Login-answer requests are rejected unless the linked
 Drupal identity currently has `windows.login` on `all_windows`; removing the
 Drupal role therefore takes effect on the next attempt.
 
-The first pilot should bind the existing `.190` Windows account `sshuser` to a
-low-privilege Drupal test user with the same name. Create that active Drupal
-user through the site's normal user administration; the module deliberately
-does not create a Drupal user or set its password. Assign it the
+The first pilot should bind a standard, non-administrator Windows account on a
+disposable test computer to a low-privilege Drupal test user. Create that active
+Drupal user through the site's normal user administration; the module
+deliberately does not create Drupal users or set their passwords. Assign it the
 `Windows Login Test` role and grant that role only `Windows sign-in` on the
-`.190` computer resource. Enrolling a machine creates its own resource named
+test computer resource. Enrolling a machine creates its own resource named
 `computer_<machine-id>`, allowing this limited grant. Do not assign the test
 user to `Windows Administrators`. A separate test will verify the global
 administrator-role policy and local Administrators membership reconciliation.
@@ -55,13 +55,20 @@ Drupal roles and grants remain the source of authorization. The exact request
 signatures and response fields are in
 docs/windows-agent-drupal-api.md.
 
+The PC inventory page lists the phone credentials enrolled for each Windows
+account. An administrator can revoke one credential after a confirmation
+step; the action is audited and leaves other phones enrolled. If a phone's
+approval is revoked before the Windows agent consumes it, the pending result
+is returned as denied.
+
 ## Not ready for deployment
 
 This is still a local development slice, not a deployable Windows login
-service. No Windows agent calls these routes yet; machine-wide account
-inventory, local-admin membership reconciliation, audit UI, and
-rollback-safe installation remain to be built. The phone app also needs a
-configured trusted Drupal PAM origin before it can use a public server
+service. The opt-in Windows service prototype calls the signed challenge and
+status routes; it is not yet included in a released installer. Policy sync,
+machine-wide account inventory, local-admin membership reconciliation, audit
+UI, and rollback-safe deployment remain to be built. The phone app also needs
+a configured trusted Drupal PAM origin before it can use a public server
 address. Keep the existing Windows PIN/password providers available.
 
 Install only on a Drupal development copy while these flows are built out.

@@ -30,6 +30,16 @@ thessley_windows_access.inventory:
   requirements:
     _permission: 'administer thessley windows access'
 
+thessley_windows_access.revoke_phone:
+  path: '/admin/config/people/thessley-windows-access/accounts/{account_id}/phones/{phone_id}/revoke'
+  defaults:
+    _form: '\Drupal\thessley_windows_access\Form\RevokePhoneForm'
+    _title: 'Revoke Windows account phone'
+  requirements:
+    _permission: 'administer thessley windows access'
+    account_id: '\d+'
+    phone_id: '\d+'
+
 # Phone responses use the existing Android PAM wire contract and are bound to
 # a short-lived request ID, nonce, machine ID, and Windows account.
 thessley_windows_access.pam_respond:

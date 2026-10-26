@@ -20,25 +20,47 @@ final class WindowsAccessStore {
   }
 
   public function createMachine(string $machine_id, string $hostname): void {
-    $this->db->merge('thessley_win_machines')
-      ->key(['machine_id' => $machine_id])
-      ->fields([
-        'hostname' => $hostname,
-        'status' => 'active',
-      ])
-      ->insertFields([
-        'created' => $this->time->getRequestTime(),
-      ])
-      ->execute();
+    $existing = $this->db->select('thessley_win_machines', 'm')
+      ->fields('m', ['status', 'revoked'])
+      ->condition('machine_id', $machine_id)
+      ->forUpdate()
+      ->execute()
+      ->fetchObject();
+    if ($existing) {
+      if ($existing->status !== 'active' || $existing->revoked !== NULL) {
+        throw new \RuntimeException('A revoked or inactive Windows machine cannot be re-enrolled.');
+      }
+      $this->db->update('thessley_win_machines')
+        ->fields(['hostname' => $hostname])
+        ->condition('machine_id', $machine_id)
+        ->execute();
+    }
+    else {
+      $this->db->insert('thessley_win_machines')
+        ->fields([
+          'machine_id' => $machine_id,
+          'hostname' => $hostname,
+          'status' => 'active',
+          'created' => $this->time->getRequestTime(),
+        ])
+        ->execute();
+    }
     $this->db->merge('thessley_win_resources')
-      ->key(['machine_name' => 'computer_' . $machine_id])
+      ->key('machine_name', 'computer_' . $machine_id)
       ->fields([
         'label' => $hostname,
         'type' => 'computer',
         'machine_id' => $machine_id,
         'status' => 'active',
       ])
-      ->insertFields(['created' => $this->time->getRequestTime()])
+      ->insertFields([
+        'machine_name' => 'computer_' . $machine_id,
+        'label' => $hostname,
+        'type' => 'computer',
+        'machine_id' => $machine_id,
+        'status' => 'active',
+        'created' => $this->time->getRequestTime(),
+      ])
       ->execute();
   }
 
@@ -124,6 +146,52 @@ final class WindowsAccessStore {
     return $row ?: NULL;
   }
 
+  /**
+   * Lists phone credentials for an account without returning public-key data.
+   */
+  public function phonesForAccount(int $account_id): array {
+    return $this->db->select('thessley_win_phones', 'p')
+      ->fields('p', ['id', 'credential_id', 'label', 'created', 'last_used', 'revoked'])
+      ->condition('account_id', $account_id)
+      ->orderBy('created', 'DESC')
+      ->execute()
+      ->fetchAll();
+  }
+
+  /**
+   * Revokes one phone credential, scoped to its Windows account.
+   */
+  public function revokePhone(int $account_id, int $phone_id, int $actor_uid): bool {
+    $transaction = $this->db->startTransaction();
+    $phone = $this->db->select('thessley_win_phones', 'p')
+      ->fields('p', ['id', 'credential_id', 'label', 'revoked'])
+      ->condition('id', $phone_id)
+      ->condition('account_id', $account_id)
+      ->forUpdate()
+      ->execute()
+      ->fetchObject();
+    if (!$phone || $phone->revoked !== NULL) {
+      return FALSE;
+    }
+    $now = $this->time->getRequestTime();
+    $changed = $this->db->update('thessley_win_phones')
+      ->fields(['revoked' => $now])
+      ->condition('id', $phone_id)
+      ->condition('account_id', $account_id)
+      ->condition('revoked', NULL, 'IS NULL')
+      ->execute();
+    if (!$changed) {
+      return FALSE;
+    }
+    $this->audit($actor_uid, 'phone_revoked', 'windows_account:' . $account_id, [
+      'phone_id' => $phone_id,
+      'credential_id_prefix' => substr((string) $phone->credential_id, 0, 10),
+      'label' => (string) $phone->label,
+    ]);
+    unset($transaction);
+    return TRUE;
+  }
+
   public function updatePhone(int $phone_id, array $fields): void {
     $allowed = array_intersect_key($fields, array_flip(['last_used', 'revoked']));
     if ($allowed) {
@@ -155,7 +223,13 @@ final class WindowsAccessStore {
 
   /** Atomically returns and consumes an answered login request. */
   public function consumeRequestResult(string $request_id): string {
-    $request = $this->request($request_id);
+    $transaction = $this->db->startTransaction();
+    $request = $this->db->select('thessley_win_requests', 'r')
+      ->fields('r')
+      ->condition('request_id', $request_id)
+      ->forUpdate()
+      ->execute()
+      ->fetchObject();
     if (!$request) {
       return 'expired';
     }
@@ -168,12 +242,30 @@ final class WindowsAccessStore {
     if (!in_array($request->status, ['approved', 'denied'], TRUE)) {
       return 'pending';
     }
+    $result = (string) $request->status;
+    if ($result === 'approved') {
+      // If a phone was revoked after approving but before the agent received
+      // the result, consume the approval as a denial. Locking this row makes
+      // the check atomic with an administrator's phone-revocation action.
+      $phone_active = $this->db->select('thessley_win_phones', 'p')
+        ->fields('p', ['id'])
+        ->condition('id', (int) $request->phone_id)
+        ->condition('account_id', (int) $request->account_id)
+        ->condition('revoked', NULL, 'IS NULL')
+        ->forUpdate()
+        ->execute()
+        ->fetchField();
+      if (!$phone_active) {
+        $result = 'denied';
+      }
+    }
     $changed = $this->db->update('thessley_win_requests')
       ->fields(['status' => 'consumed'])
       ->condition('request_id', $request_id)
       ->condition('status', $request->status)
       ->execute();
-    return $changed ? (string) $request->status : 'consumed';
+    unset($transaction);
+    return $changed ? $result : 'consumed';
   }
 
   public function request(string $request_id): ?object {

@@ -1,8 +1,9 @@
 # Windows agent ↔ Drupal API
 
-This describes the first signed API slice in
-drupal/thessley_windows_access. It is a development contract, not a released
-Windows client protocol.
+This describes the signed API slice in
+drupal/thessley_windows_access. The opt-in Windows service prototype in the
+separate Windows project calls the challenge and status routes. It is a
+development contract, not a released Windows client protocol.
 
 ## Separate identity and group concepts
 
@@ -116,7 +117,8 @@ This is inventory only: reported Windows groups never grant Drupal rights.
 
 ## Current gaps
 
-- No Windows agent code calls these routes yet.
+- The Windows service prototype calls challenge and status only. Policy sync
+  and signed inventory reporting are still not wired into the agent.
 - The inventory is account-scoped; machine-wide account discovery is still
   missing. Admin has a read-only view of reported local groups. The UI creates
   account bindings manually.
@@ -127,6 +129,16 @@ This is inventory only: reported Windows groups never grant Drupal rights.
   a public Drupal PAM host requires a separately reviewed Android trust
   change.
 
-Do not enable the experimental tile or grant Windows Administrators based on
-this API draft. The fallback Windows sign-in providers must remain available
-until the full client and rollback path have been proven.
+For the prototype, test only a low-privilege mapped account with the
+computer-scoped `windows.login` grant. Do not grant `windows.local_admin`:
+the service does not yet reconcile Windows group membership. Keep the normal
+PIN/password provider available until deployment rollback and recovery are
+integrated and proven.
+
+## Phone-key revocation
+
+An administrator can revoke an enrolled phone credential from the PC
+inventory page. The server keeps an audit record and rejects later responses
+from that credential. If an approval was already recorded but the agent has
+not consumed it yet, polling checks that the approving credential is still
+active and returns `denied` when it has been revoked.

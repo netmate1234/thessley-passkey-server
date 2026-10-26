@@ -23,7 +23,7 @@ final class AgentApiController extends ControllerBase {
     protected AgentProtocol $protocol,
     protected PamProtocol $pam,
     protected FloodInterface $flood,
-    protected ConfigFactoryInterface $configFactory,
+    protected ConfigFactoryInterface $configFactoryService,
     protected TimeInterface $time,
   ) {}
 
@@ -86,7 +86,7 @@ final class AgentApiController extends ControllerBase {
       return $this->reply(['result' => 'error', 'message' => 'This challenge was already used. Start a new one.'], 409);
     }
 
-    $settings = $this->configFactory->get('thessley_windows_access.settings');
+    $settings = $this->configFactoryService->get('thessley_windows_access.settings');
     $origin = parse_url((string) $settings->get('public_url'));
     $fingerprint = strtolower((string) $settings->get('tls_sha256'));
     $machine = $this->store->machine($machine_id);

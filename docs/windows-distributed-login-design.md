@@ -14,14 +14,14 @@ The Windows sign-in UI and resource access checks are separate enforcement paths
 ## What exists today
 
 - The Windows UI is a native C++ Credential Provider and QR viewer. The separate desktop prototype calls the local Python service on `127.0.0.1:47800`.
-- The Python service creates phone approval requests using the existing Thessley signed-request protocol. The test app proves phone approval and cancellation, but does not log a user into Windows.
+- The Python service creates local phone approval requests using the existing Thessley signed-request protocol. An opt-in prototype now routes one configured Windows account through the Drupal signed challenge/status API; other accounts keep using the local service.
 - The experimental provider currently uses a DPAPI-protected saved Windows password after phone approval. It is therefore a QR-gated password vault, not passwordless authentication. The built-in PIN/password providers are recovery paths and must remain available during development.
 - The Drupal module already has request, phone-key, signature-validation, and revocation patterns. Its existing API is for Drupal web login; Windows identities and resource authorization need their own records and routes.
 
 ## Phone-app compatibility: use the existing PAM protocol
 
-The phone-facing Windows flow should use the existing Thessley PAM protocol,
-not the website passkey protocol and not a new Windows-only approval format.
+The phone-facing Windows flow uses the existing Thessley PAM protocol,
+not the website passkey protocol or a new Windows-only approval format.
 The QR should be a `thessleypam://login?...` request, signed as
 `thessley_pam_v1`, and bind the approval to the Windows machine ID and account.
 That is the screen-login request type already understood by the Android app.
@@ -33,13 +33,13 @@ it creates that local Computers entry. Later login QR approvals should match
 that entry by machine ID and account, then use its Android Keystore key. The
 existing PIN/biometric prompt remains the user's confirmation.
 
-For the distributed version, Windows should open a PAM request at the central
-Drupal service; the app should post its PAM response to that same service. The
-Windows agent can poll the request result using its registered client key.
-This preserves the phone's computer/account UX while removing the need for an
-incoming phone connection to each Windows PC. Drupal must implement the PAM
-enrollment, request, status, and response shapes expected by the app. The
-current Drupal website-login API alone does not provide those endpoints.
+For the distributed version, Windows opens a PAM request at the Drupal
+service; the app posts its PAM response to that service, and the Windows agent
+polls with its registered client key. The first opt-in vertical slice now
+follows this flow for screen login and phone enrollment. It preserves the
+phone's computer/account UX and removes the need for an incoming phone
+connection to each Windows PC. Broader account lifecycle, policy sync, and
+resource authorization remain separate work.
 
 The Android PAM parser currently accepts private IPv4 hosts for computer
 requests and reserves public hosts for explicitly enrolled VPN hosts. A public

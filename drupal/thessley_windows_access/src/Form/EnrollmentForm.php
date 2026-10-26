@@ -153,7 +153,9 @@ final class EnrollmentForm extends FormBase {
     $hostname = trim((string) $form_state->getValue('hostname'));
     $username = strtolower(trim((string) $form_state->getValue('username')));
     $uid = (int) $form_state->getValue('uid');
+    $transaction = NULL;
     try {
+      $transaction = \Drupal::database()->startTransaction();
       $store = \Drupal::service('thessley_windows_access.store');
       $store->createMachine($machine_id, $hostname);
       $account_id = $store->createAccount(
@@ -165,8 +167,12 @@ final class EnrollmentForm extends FormBase {
         preg_replace('/\s+/', '', trim((string) $form_state->getValue('agent_public_key'))),
       );
       $request = $store->createRequest($account_id, 'enroll', 300);
+      unset($transaction);
     }
     catch (\Throwable $e) {
+      if ($transaction) {
+        $transaction->rollBack();
+      }
       $this->getLogger('thessley_windows_access')->warning('Could not create a Windows account enrollment: @type', ['@type' => get_class($e)]);
       $this->messenger()->addError($this->t('That Windows account binding could not be created. Check whether the machine and SID are already enrolled.'));
       return;

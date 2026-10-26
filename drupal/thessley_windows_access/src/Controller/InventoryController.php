@@ -3,6 +3,8 @@
 namespace Drupal\thessley_windows_access\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 use Drupal\thessley_windows_access\WindowsAccessStore;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -30,7 +32,25 @@ final class InventoryController extends ControllerBase {
           'status' => $item->revoked !== NULL ? $this->t('Revoked') : (string) $item->status,
           'last_seen' => $item->last_seen ? \Drupal::service('date.formatter')->format((int) $item->last_seen, 'short') : $this->t('Never'),
           'groups' => [],
+          'phones' => [],
         ];
+        foreach ($this->store->phonesForAccount($id) as $phone) {
+          $label = (string) $phone->label . ' · ' . substr((string) $phone->credential_id, 0, 10) . '…';
+          $entry = [
+            '#type' => 'container',
+            'label' => ['#plain_text' => $label . ($phone->revoked !== NULL ? ' — ' . (string) $this->t('revoked') : '')],
+          ];
+          if ($phone->revoked === NULL && $item->revoked === NULL) {
+            $entry['revoke'] = Link::fromTextAndUrl(
+              $this->t('Revoke'),
+              Url::fromRoute('thessley_windows_access.revoke_phone', [
+                'account_id' => $id,
+                'phone_id' => (int) $phone->id,
+              ]),
+            )->toRenderable();
+          }
+          $accounts[$id]['phones'][] = $entry;
+        }
       }
       if ($item->group_name !== NULL) {
         $accounts[$id]['groups'][] = (string) $item->group_name . ' · ' . substr((string) $item->group_sid_hash, 0, 12);
@@ -45,11 +65,13 @@ final class InventoryController extends ControllerBase {
         ['data' => ['#plain_text' => (string) $account['identity']]],
         ['data' => ['#plain_text' => (string) $account['status']]],
         ['data' => ['#plain_text' => (string) $account['last_seen']]],
+        $account['phones'] ? ['data' => ['#theme' => 'item_list', '#items' => $account['phones']]] : ['data' => ['#plain_text' => (string) $this->t('No enrolled phone')]],
         ['data' => ['#plain_text' => $account['groups'] ? implode("\n", $account['groups']) : (string) $this->t('No group report yet')]],
       ];
     }
 
     return [
+      '#cache' => ['max-age' => 0],
       'intro' => [
         '#markup' => $this->t('PC-reported Windows groups are inventory only. Drupal roles and resource grants control Thessley access. The local Administrators group is changed only by an endpoint agent after an explicit grant.'),
       ],
@@ -61,6 +83,7 @@ final class InventoryController extends ControllerBase {
           $this->t('Drupal user'),
           $this->t('Binding'),
           $this->t('Last report'),
+          $this->t('Phone credentials'),
           $this->t('Reported Windows groups'),
         ],
         '#rows' => $rows,
