@@ -64,20 +64,29 @@ Drupal roles and grants remain the source of authorization. The exact request
 signatures and response fields are in
 docs/windows-agent-drupal-api.md.
 
+The Windows service syncs each configured Drupal binding immediately after
+service startup and every 15 minutes. It uploads direct local-group inventory,
+pulls current Drupal roles and grants, and reconciles only local
+Administrators membership that it previously added for that mapped account.
+The first `Windows Access` inventory row should show its group report after the
+first successful sync. Sign-in grants are checked directly by Drupal for every
+login request, so stale local policy cannot grant a new sign-in.
+
 The PC inventory page lists the phone credentials enrolled for each Windows
 account. An administrator can revoke one credential after a confirmation
 step; the action is audited and leaves other phones enrolled. If a phone's
 approval is revoked before the Windows agent consumes it, the pending result
 is returned as denied.
 
-## Not ready for deployment
+## Prototype limitations
 
-This is still a local development slice, not a deployable Windows login
-service. The opt-in Windows service prototype calls the signed challenge and
-status routes; it is not yet included in a released installer. Policy sync,
-machine-wide account inventory, local-admin membership reconciliation, audit
-UI, and rollback-safe deployment remain to be built. The phone app also needs
-a configured trusted Drupal PAM origin before it can use a public server
-address. Keep the existing Windows PIN/password providers available.
+This remains a development prototype. Drupal account bindings are enrolled
+separately for each Windows computer; one Drupal identity may link to a local
+account with the same name on many computers, but each PC has its own SID,
+agent key, and phone enrollment. Drupal role grants can apply to all enrolled
+computers. The service currently reconciles only the local Administrators
+group, not arbitrary local groups. The phone app also needs a configured
+trusted Drupal PAM origin before it can use a public server address. Keep the
+existing Windows PIN/password providers available.
 
 Install only on a Drupal development copy while these flows are built out.

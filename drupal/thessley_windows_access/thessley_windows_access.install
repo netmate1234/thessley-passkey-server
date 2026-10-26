@@ -162,6 +162,14 @@ function thessley_windows_access_schema(): array {
  * Implements hook_install().
  */
 function thessley_windows_access_install(): void {
+  // This Drupal instance is the dedicated Windows Access console. Route its
+  // default front page to the protected tool dashboard instead of Drupal's
+  // empty-site "Welcome" page.
+  $site = \Drupal::configFactory()->getEditable('system.site');
+  if ($site->get('page.front') === '/node') {
+    $site->set('page.front', '/admin/thessley-windows-access')->save();
+  }
+
   $roles = \Drupal::entityTypeManager()->getStorage('user_role');
   $administrator = $roles->load('administrator');
   if ($administrator && !$administrator->hasPermission('administer thessley windows access')) {
@@ -225,6 +233,17 @@ function thessley_windows_access_install(): void {
 
   // The pilot role is intentionally created without any grants. An admin
   // must add only the test computer's Windows sign-in action in the policy UI.
+}
+
+/**
+ * Route the default front page to the Windows Access dashboard.
+ */
+function thessley_windows_access_update_10001(): string {
+  $site = \Drupal::configFactory()->getEditable('system.site');
+  if ($site->get('page.front') === '/node') {
+    $site->set('page.front', '/admin/thessley-windows-access')->save();
+  }
+  return 'Routed the default Drupal welcome page to the protected Windows Access dashboard.';
 }
 
 /**

@@ -24,7 +24,7 @@ final class EnrollmentForm extends FormBase {
     $form['#attached']['library'][] = 'thessley_windows_access/admin';
     $form['intro'] = [
       '#type' => 'item',
-      '#markup' => $this->t('Create a test binding for one Windows account on one computer, then add the phone approval key. Windows account names are case-normalized for the current PAM app. Each account on the same computer gets a separate binding.'),
+      '#markup' => $this->t('Create a binding for one Windows account on one computer, then enroll its phone approval key. The local Windows account must already exist on that PC. You can link the same Drupal user to an account with the same name on many PCs, but each computer has its own machine ID, account SID, agent key, and phone enrollment.'),
     ];
     $form['machine_id'] = [
       '#type' => 'textfield',

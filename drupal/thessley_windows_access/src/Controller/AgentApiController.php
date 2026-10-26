@@ -213,7 +213,9 @@ final class AgentApiController extends ControllerBase {
    * Receives a signed snapshot of Windows local groups for one account.
    */
   public function inventory(Request $request, string $machine_id, string $username): JsonResponse {
-    $body = $this->jsonBody($request);
+    // The signed group snapshot is Base64-wrapped in JSON. Allow enough room
+    // for the documented 18 KB decoded inventory plus its encoding overhead.
+    $body = $this->jsonBody($request, 32768);
     if ($body instanceof JsonResponse) {
       return $body;
     }
@@ -287,8 +289,8 @@ final class AgentApiController extends ControllerBase {
     return $user && $user->isActive();
   }
 
-  private function jsonBody(Request $request): array|JsonResponse {
-    if (strlen((string) $request->getContent()) > 16384) {
+  private function jsonBody(Request $request, int $max_bytes = 16384): array|JsonResponse {
+    if (strlen((string) $request->getContent()) > $max_bytes) {
       return $this->reply(['result' => 'error', 'message' => 'Request body is too large.'], 413);
     }
     $body = json_decode((string) $request->getContent(), TRUE);

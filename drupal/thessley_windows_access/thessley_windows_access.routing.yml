@@ -12,7 +12,7 @@ thessley_windows_access.dashboard:
     _controller: '\Drupal\thessley_windows_access\Controller\AdminLandingController::overview'
     _title: 'Windows Access'
   requirements:
-    _permission: 'administer thessley windows access'
+    _permission: 'access content'
 
 thessley_windows_access.enroll:
   path: '/admin/config/people/thessley-windows-access/enroll'

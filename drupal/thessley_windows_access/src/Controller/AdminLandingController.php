@@ -13,10 +13,10 @@ final class AdminLandingController extends ControllerBase {
   public function overview(): array {
     $items = [
       [
-        'title' => $this->t('Accounts and computers'),
-        'description' => $this->t('Review Windows account bindings, enrolled phones, computer reports, and revoke a phone credential.'),
+        'title' => $this->t('Windows accounts and sync report'),
+        'description' => $this->t('Review linked Windows accounts, last check-in, reported local groups, and enrolled phones. Revoke a phone credential when needed.'),
         'route' => 'thessley_windows_access.inventory',
-        'link' => $this->t('Open account inventory'),
+        'link' => $this->t('Open Windows report'),
       ],
       [
         'title' => $this->t('Enroll a Windows account'),
@@ -60,7 +60,7 @@ final class AdminLandingController extends ControllerBase {
       '#attached' => ['library' => ['thessley_windows_access/admin']],
       'intro' => [
         '#type' => 'item',
-        '#markup' => $this->t('Manage Windows login and resource access from here. Drupal roles act as groups; accounts inherit the groups assigned to their linked Drupal user.'),
+        '#markup' => $this->t('Windows Access tools are listed below. Sign in with a Windows Access administrator account to manage them. Drupal roles act as groups; each linked Windows account inherits its user’s roles. Enrolled PCs report account group membership and receive policy updates when the Windows agent is installed and running.'),
       ],
       'cards' => [
         '#type' => 'container',

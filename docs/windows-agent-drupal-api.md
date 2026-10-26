@@ -19,10 +19,10 @@ development contract, not a released Windows client protocol.
   must reconcile only Thessley-managed membership and preserve unrelated
   administrators and recovery accounts.
 
-The API returns current Drupal role membership and effective actions to the
-agent. Removing the Drupal grant blocks new sign-ins immediately. Local
-administrator removal needs a later successful policy sync with the PC; that
-offline delay must be shown in Admin.
+The service returns current Drupal role membership and effective actions to
+the agent. Removing the Drupal sign-in grant blocks new sign-ins immediately.
+The agent pulls policy at startup and every 15 minutes; local group changes
+therefore need the PC to be online for reconciliation.
 
 ## Account key and signatures
 
@@ -83,8 +83,13 @@ JSON body is timestamp plus an agent signature over the policy message. The
 response contains the mapped Drupal user's roles and effective windows.login
 and windows.local_admin actions for that computer. managed_local_groups
 contains Administrators only when the latter action is currently granted.
-The agent should periodically pull this policy and reconcile only Thessley
-managed state.
+The Windows service pulls this endpoint once after startup and every 15
+minutes for each configured binding. It applies only the supported
+Administrators membership. If the user was already a direct member before
+Thessley added them, the service does not claim or later remove that membership.
+If Thessley added the member, the service records ownership locally and removes
+only that membership after the Drupal grant is withdrawn. It never removes
+other local administrators.
 
 ### Report Windows local groups
 
@@ -111,29 +116,32 @@ Decoded JSON format:
     }
 
 Drupal stores this as the latest Windows local-group snapshot for the mapped
-account. A report replaces that account's previous snapshot. The agent should
-hash each SID locally and report at most 128 groups. Raw SIDs are not stored.
-This is inventory only: reported Windows groups never grant Drupal rights.
+account. A report replaces that account's previous snapshot. The Windows
+service enumerates the account's direct local-group memberships, hashes each
+group SID locally, and reports at most 128 groups during the same startup/15
+minute sync. Raw SIDs are not stored. This is inventory only: reported Windows
+groups never grant Drupal rights.
 
-## Current gaps
+## Remaining limitations
 
-- The Windows service prototype calls challenge and status only. Policy sync
-  and signed inventory reporting are still not wired into the agent.
+- The sync is account-scoped. Each Windows binding must be configured with
+  `drupal-setup` and enrolled in the Drupal Windows Access module.
 - The inventory is account-scoped; machine-wide account discovery is still
   missing. Admin has a read-only view of reported local groups. The UI creates
   account bindings manually.
-- managed_local_groups is a desired policy result; actual Windows group
-  reconciliation, rollback, offline behavior, and audit acknowledgements are
-  not implemented.
+- `Administrators` membership is reconciled only for the mapped account and
+  only when the agent's local ownership record says Thessley added it. Broader
+  Windows group policy, offline change acknowledgements, and fleet-wide
+  machine/account discovery are not implemented.
 - Android currently restricts computer PAM links to private IPv4 addresses;
   a public Drupal PAM host requires a separately reviewed Android trust
   change.
 
 For the prototype, test only a low-privilege mapped account with the
-computer-scoped `windows.login` grant. Do not grant `windows.local_admin`:
-the service does not yet reconcile Windows group membership. Keep the normal
-PIN/password provider available until deployment rollback and recovery are
-integrated and proven.
+computer-scoped `windows.login` grant. Granting `windows.local_admin` adds the
+mapped Windows account to local Administrators after a successful policy sync.
+Keep the normal PIN/password provider available until deployment rollback and
+recovery are integrated and proven.
 
 ## Phone-key revocation
 
