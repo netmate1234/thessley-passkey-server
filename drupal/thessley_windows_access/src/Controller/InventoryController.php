@@ -72,6 +72,7 @@ final class InventoryController extends ControllerBase {
 
     return [
       '#cache' => ['max-age' => 0],
+      '#attached' => ['library' => ['thessley_windows_access/admin']],
       'actions' => [
         '#type' => 'container',
         '#attributes' => ['class' => ['thessley-windows-access-actions']],
