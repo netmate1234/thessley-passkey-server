@@ -20,7 +20,12 @@ final class WindowsAccessStore {
   }
 
   /** Creates a ten-minute enrollment code and binds it to the chosen PC IP/account. */
-  public function createPairing(string $client_ip, string $username, int $uid): string {
+  public function createPairing(string $client_ip, string $username, int $uid, string $principal_type = 'local', string $authority = ''): string {
+    if (!in_array($principal_type, ['local', 'domain'], TRUE)
+      || ($principal_type === 'domain' && !preg_match('/^[A-Za-z0-9_.@-]{1,128}$/', $authority))
+      || ($authority !== '' && !preg_match('/^[A-Za-z0-9_.@-]{1,128}$/', $authority))) {
+      throw new \InvalidArgumentException('Invalid Windows account authority.');
+    }
     $now = $this->time->getRequestTime();
     for ($attempt = 0; $attempt < 3; $attempt++) {
       $code = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
@@ -29,6 +34,8 @@ final class WindowsAccessStore {
           'code_hash' => hash('sha256', $code),
           'client_ip' => $client_ip,
           'username' => $username,
+          'principal_type' => $principal_type,
+          'authority' => $authority,
           'uid' => $uid,
           'status' => 'pending',
           'created' => $now,
@@ -46,7 +53,7 @@ final class WindowsAccessStore {
   }
 
   /** Consumes a one-time pairing and creates the pending account and phone request atomically. */
-  public function completePairing(string $code, string $client_ip, string $machine_id, string $hostname, string $username, string $sid_hash, string $public_key): ?array {
+  public function completePairing(string $code, string $client_ip, string $machine_id, string $hostname, string $username, string $sid_hash, string $public_key, string $principal_type = 'local', string $authority = '', int $protocol_version = 1): ?array {
     $transaction = $this->db->startTransaction();
     $pairing = $this->db->select('thessley_win_pairings', 'p')
       ->fields('p')
@@ -57,7 +64,9 @@ final class WindowsAccessStore {
     $now = $this->time->getRequestTime();
     if (!$pairing || $pairing->status !== 'pending' || (int) $pairing->expires < $now
       || !hash_equals((string) $pairing->client_ip, $client_ip)
-      || !hash_equals((string) $pairing->username, $username)) {
+      || !hash_equals((string) $pairing->username, $username)
+      || !hash_equals((string) ($pairing->principal_type ?? 'local'), $principal_type)
+      || ((string) ($pairing->authority ?? '') !== '' && !hash_equals((string) $pairing->authority, $authority))) {
       $transaction->rollBack();
       return NULL;
     }
@@ -72,8 +81,8 @@ final class WindowsAccessStore {
       return NULL;
     }
     $this->createMachine($machine_id, $hostname);
-    $account_id = $this->createAccount($machine_id, $sid_hash, $username, $username, (int) $pairing->uid, $public_key);
-    $request = $this->createRequest($account_id, 'enroll', 300);
+    $account_id = $this->createAccount($machine_id, $sid_hash, $username, $username, (int) $pairing->uid, $public_key, $principal_type, $authority);
+    $request = $this->createRequest($account_id, 'enroll', 300, NULL, $protocol_version, 'enrollment');
     $this->db->update('thessley_win_pairings')
       ->fields(['status' => 'used', 'used' => $now])
       ->condition('code_hash', hash('sha256', $code))
@@ -133,12 +142,14 @@ final class WindowsAccessStore {
       ->execute();
   }
 
-  public function createAccount(string $machine_id, string $sid_hash, string $username, string $display_name, int $uid, string $public_key): int {
+  public function createAccount(string $machine_id, string $sid_hash, string $username, string $display_name, int $uid, string $public_key, string $principal_type = 'local', string $authority = ''): int {
     $id = $this->db->insert('thessley_win_accounts')
       ->fields([
         'machine_id' => $machine_id,
         'sid_hash' => $sid_hash,
         'username' => $username,
+        'principal_type' => $principal_type,
+        'authority' => $authority,
         'display_name' => $display_name,
         'uid' => $uid,
         'public_key' => $public_key,
@@ -182,6 +193,18 @@ final class WindowsAccessStore {
       ->fields('a')
       ->condition('machine_id', $machine_id)
       ->condition('username', $username)
+      ->condition('status', 'active')
+      ->condition('revoked', NULL, 'IS NULL')
+      ->execute()
+      ->fetchObject();
+    return $row ?: NULL;
+  }
+
+  public function accountByMachineSid(string $machine_id, string $sid_hash): ?object {
+    $row = $this->db->select('thessley_win_accounts', 'a')
+      ->fields('a')
+      ->condition('machine_id', $machine_id)
+      ->condition('sid_hash', $sid_hash)
       ->condition('status', 'active')
       ->condition('revoked', NULL, 'IS NULL')
       ->execute()
@@ -268,9 +291,13 @@ final class WindowsAccessStore {
     }
   }
 
-  public function createRequest(int $account_id, string $type, int $ttl, ?string $client_nonce = NULL): array {
+  public function createRequest(int $account_id, string $type, int $ttl, ?string $client_nonce = NULL, int $protocol_version = 1, string $logon_context = ''): array {
     if (!in_array($type, ['enroll', 'login', 'sudo'], TRUE) || $ttl < 30 || $ttl > 600) {
       throw new \InvalidArgumentException('Invalid PAM request parameters.');
+    }
+    if (!in_array($protocol_version, [1, 2], TRUE)
+      || !in_array($logon_context, ['', 'enrollment', 'interactive', 'unlock'], TRUE)) {
+      throw new \InvalidArgumentException('Invalid Windows protocol context.');
     }
     $request_id = $this->randomToken();
     $nonce = $this->randomToken();
@@ -282,6 +309,8 @@ final class WindowsAccessStore {
         'type' => $type,
         'nonce' => $nonce,
         'client_nonce' => $client_nonce,
+        'protocol_version' => $protocol_version,
+        'logon_context' => $logon_context,
         'status' => 'pending',
         'created' => $now,
         'expires' => $now + $ttl,
@@ -436,7 +465,7 @@ final class WindowsAccessStore {
    */
   public function accountInventory(): array {
     $query = $this->db->select('thessley_win_accounts', 'a')
-      ->fields('a', ['id', 'machine_id', 'username', 'uid', 'status', 'last_seen', 'revoked']);
+      ->fields('a', ['id', 'machine_id', 'username', 'principal_type', 'authority', 'uid', 'status', 'last_seen', 'revoked']);
     $query->addField('m', 'hostname');
     $query->addField('g', 'group_sid_hash');
     $query->addField('g', 'group_name');
@@ -450,7 +479,7 @@ final class WindowsAccessStore {
    */
   public function accountInventoryForUser(int $uid): array {
     $query = $this->db->select('thessley_win_accounts', 'a')
-      ->fields('a', ['id', 'machine_id', 'username', 'status', 'last_seen', 'revoked'])
+      ->fields('a', ['id', 'machine_id', 'username', 'principal_type', 'authority', 'status', 'last_seen', 'revoked'])
       ->condition('a.uid', $uid);
     $query->addField('m', 'hostname');
     $query->addField('g', 'group_sid_hash');

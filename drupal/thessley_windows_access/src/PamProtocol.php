@@ -10,6 +10,7 @@ namespace Drupal\thessley_windows_access;
 final class PamProtocol {
 
   public const SIG_VERSION = 'thessley_pam_v1';
+  public const WINDOWS_SIG_VERSION_V2 = 'thessley_win_pam_v2';
   public const TIMESTAMP_SKEW = 60;
 
   /**
@@ -25,6 +26,23 @@ final class PamProtocol {
     foreach ($fields as $field) {
       if ($field === '' || preg_match('/[|\s\x00-\x1F\x7F]/u', $field)) {
         throw new \InvalidArgumentException('PAM signed fields must be non-empty and contain no separators or whitespace.');
+      }
+    }
+    return implode('|', $fields);
+  }
+
+  /** Signed Windows v2 approval with an unambiguous principal and logon context. */
+  public function canonicalWindowsV2(string $type, string $request_id, string $machine_id, string $principal_id, string $principal_type, string $authority, string $username, string $context, string $nonce, int $timestamp, string $action): string {
+    if (!in_array($type, ['enroll', 'login'], TRUE) || !in_array($action, ['register', 'approve', 'deny'], TRUE)
+      || !preg_match('/^[a-f0-9]{64}$/', $principal_id)
+      || !in_array($principal_type, ['local', 'domain'], TRUE)
+      || !in_array($context, ['enrollment', 'interactive', 'unlock'], TRUE)) {
+      throw new \InvalidArgumentException('Unsupported Windows v2 request type, principal, or context.');
+    }
+    $fields = [self::WINDOWS_SIG_VERSION_V2, $type, $request_id, $machine_id, $principal_id, $principal_type, $authority, $username, $context, $nonce, (string) $timestamp, $action];
+    foreach ($fields as $field) {
+      if ($field === '' || preg_match('/[|\s\x00-\x1F\x7F]/u', $field)) {
+        throw new \InvalidArgumentException('Windows v2 signed fields must be non-empty and contain no separators or whitespace.');
       }
     }
     return implode('|', $fields);

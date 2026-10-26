@@ -129,3 +129,63 @@ thessley_windows_access.agent_pair:
     _access: 'TRUE'
   options:
     no_cache: TRUE
+
+thessley_windows_access.agent_pair_v2:
+  path: '/thessley-windows/v2/pair'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::pairV2'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_challenge_v2:
+  path: '/thessley-windows/v2/{machine_id}/{principal_id}/challenge/{context}'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::challengeV2'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    principal_id: '[a-f0-9]{64}'
+    context: 'interactive|unlock'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_status_v2:
+  path: '/thessley-windows/v2/{machine_id}/{principal_id}/requests/{request_id}/status'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::statusV2'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    principal_id: '[a-f0-9]{64}'
+    request_id: '[A-Za-z0-9_-]{32,64}'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_policy_v2:
+  path: '/thessley-windows/v2/{machine_id}/{principal_id}/policy'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::policyV2'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    principal_id: '[a-f0-9]{64}'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_inventory_v2:
+  path: '/thessley-windows/v2/{machine_id}/{principal_id}/inventory'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::inventoryV2'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    principal_id: '[a-f0-9]{64}'
+  options:
+    no_cache: TRUE

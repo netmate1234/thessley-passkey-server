@@ -1,6 +1,9 @@
 # Thessley distributed Windows login and access — design draft
 
-Status: architecture proposal for review. This document does not change or register the Windows sign-in provider.
+Status: prototype implemented in the Windows Access Drupal module, Windows
+helper, Android app, and optional Windows tile. V2 is SID-scoped; v1 remains
+for compatibility with existing local-account enrollments. The implementation
+is still a prototype and is not a passwordless Windows authentication package.
 
 ## Goal
 
@@ -18,20 +21,22 @@ The Windows sign-in UI and resource access checks are separate enforcement paths
 - The experimental provider currently uses a DPAPI-protected saved Windows password after phone approval. It is therefore a QR-gated password vault, not passwordless authentication. The built-in PIN/password providers are recovery paths and must remain available during development.
 - The Drupal module already has request, phone-key, signature-validation, and revocation patterns. Its existing API is for Drupal web login; Windows identities and resource authorization need their own records and routes.
 
-## Phone-app compatibility: use the existing PAM protocol
+## Phone-app compatibility: keep the PAM request family, version the identity
 
-The phone-facing Windows flow uses the existing Thessley PAM protocol,
-not the website passkey protocol or a new Windows-only approval format.
-The QR should be a `thessleypam://login?...` request, signed as
-`thessley_pam_v1`, and bind the approval to the Windows machine ID and account.
-That is the screen-login request type already understood by the Android app.
+The phone-facing Windows flow stays in the Thessley PAM request family, not
+the website passkey protocol. Existing v1 stays byte-compatible. New Windows
+enrollments use `thessley_win_pam_v2` over the same
+`thessleypam://enroll` and `thessleypam://login` links. V2 signs the machine
+ID, SID digest, local/domain scope, authority, short username, request nonce,
+and explicit enrollment/interactive/unlock context. This removes the
+username-only ambiguity without making Android guess whether `martin` means a
+local or domain principal.
 
 The Android app stores an enrolled computer account under **Computers**, with
-the computer name and account name shown on the card. The enrollment API must
-return the same kind of successful enrollment response the app uses today so
-it creates that local Computers entry. Later login QR approvals should match
-that entry by machine ID and account, then use its Android Keystore key. The
-existing PIN/biometric prompt remains the user's confirmation.
+the computer name and scoped account label shown on the card. V1 requests
+match by machine and short username. V2 requests match by machine and SID
+digest, then use that entry's Android Keystore key. The existing
+PIN/biometric prompt remains the user's confirmation.
 
 For the distributed version, Windows opens a PAM request at the Drupal
 service; the app posts its PAM response to that service, and the Windows agent
@@ -48,13 +53,10 @@ step in the app. Do not simply allow any public hostname from a QR; the QR
 must be constrained to a Drupal origin the user has already configured or
 verified.
 
-One compatibility detail needs attention: Android currently validates the
-PAM account string as a short Unix-style username. Windows domain names such
-as `DOMAIN\\user` do not fit that rule. We should extend the PAM model to carry
-a display-safe account label while binding signatures to a canonical stable
-principal ID, or make a carefully versioned parser/protocol update. Do not
-silently truncate the account name, because two accounts could then appear to
-be the same in the phone UI.
+Android carries the short account name separately from its scope and authority.
+It does not truncate `DOMAIN\\user`; it constructs that display label from
+signed v2 fields. The API, helper, Credential Provider, and phone all use the
+SID digest for matching and signatures.
 
 Windows Credential Providers gather and serialize credentials; Windows authentication packages validate them. The UI tile alone cannot make a remote approval into a Windows credential. See [Microsoft's Credential Providers documentation](https://learn.microsoft.com/en-us/windows/win32/secauthn/credential-providers-in-windows).
 
@@ -164,10 +166,11 @@ Drupal identity. For the promise “any Windows Administrators group member can
 sign in to any managed PC,” every such person needs an account binding on each
 target PC; the service can provision missing accounts only through a separate,
 explicitly approved account-provisioning flow. A matching display name alone
-is not a safe mapping. The current Credential Provider's password vault is
-keyed to the local SID, so this account-provisioning and credential-validation
-path is part of the Windows sign-in proof, not something the Drupal group
-checkbox can solve.
+is not a safe mapping. The current SID-scoped protocol prevents a local and
+domain account with the same short name from colliding. It does not create
+missing Windows accounts or replace Windows credential validation. The
+prototype supports the interactive sign-in tile and workstation unlock;
+remote/network logon and Credential UI (`CredUI`) contexts remain out of scope.
 
 The admin UI can provide a drag-and-drop matrix: people/groups on one side, resources on the other, with explicit action chips. Include a keyboard- and mobile-accessible alternative, a review-before-save step for bulk changes, and an audit entry showing who changed which grant. Enforce every rule in the API; hiding a control in the page is not authorization.
 

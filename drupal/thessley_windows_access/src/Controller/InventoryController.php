@@ -27,7 +27,9 @@ final class InventoryController extends ControllerBase {
         $identity = $this->entityTypeManager()->getStorage('user')->load((int) $item->uid);
         $accounts[$id] = [
           'machine' => (string) $item->hostname . ' (' . (string) $item->machine_id . ')',
-          'username' => (string) $item->username,
+          'username' => !empty($item->authority)
+            ? (string) $item->authority . '\\' . (string) $item->username
+            : (string) $item->username,
           'identity' => $identity ? $identity->getAccountName() : $this->t('Missing Drupal user'),
           'status' => $item->revoked !== NULL ? $this->t('Revoked') : (string) $item->status,
           'last_seen' => $item->last_seen ? \Drupal::service('date.formatter')->format((int) $item->last_seen, 'short') : $this->t('Never'),

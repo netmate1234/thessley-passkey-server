@@ -104,15 +104,7 @@ final class PamApiController extends ControllerBase {
     $label = $label !== '' ? $label : 'Phone';
 
     try {
-      $message = $this->protocol->canonical(
-        'enroll',
-        (string) $row->request_id,
-        (string) $account->machine_id,
-        (string) $account->username,
-        (string) $row->nonce,
-        $timestamp,
-        'register',
-      );
+      $message = $this->phoneMessage($row, $account, 'enroll', $timestamp, 'register');
     }
     catch (\InvalidArgumentException) {
       return $this->error('Invalid PAM enrollment request.', 400);
@@ -137,6 +129,9 @@ final class PamApiController extends ControllerBase {
       'result' => 'ok',
       'credential_id' => $credential_id,
       'username' => (string) $account->username,
+      'sid_sha256' => (string) $account->sid_hash,
+      'principal_type' => (string) $account->principal_type,
+      'authority' => (string) $account->authority,
       'hostname' => (string) ($machine->hostname ?? ''),
     ]);
   }
@@ -155,15 +150,7 @@ final class PamApiController extends ControllerBase {
 
     if ($signature !== '') {
       try {
-        $message = $this->protocol->canonical(
-          $type,
-          (string) $row->request_id,
-          (string) $account->machine_id,
-          (string) $account->username,
-          (string) $row->nonce,
-          $timestamp,
-          $action,
-        );
+        $message = $this->phoneMessage($row, $account, $type, $timestamp, $action);
       }
       catch (\InvalidArgumentException) {
         return $this->error('Invalid PAM login request.', 400);
@@ -191,7 +178,9 @@ final class PamApiController extends ControllerBase {
           'windows_account:' . (int) $account->id,
           [
             'computer' => (string) ($machine->hostname ?? $account->machine_id),
-            'username' => (string) $account->username,
+            'username' => !empty($account->authority)
+              ? (string) $account->authority . '\\' . (string) $account->username
+              : (string) $account->username,
             'phone' => (string) $phone->label,
           ],
         );
@@ -205,6 +194,33 @@ final class PamApiController extends ControllerBase {
       }
     }
     return $this->reply(['result' => 'ok']);
+  }
+
+  private function phoneMessage(object $row, object $account, string $type, int $timestamp, string $action): string {
+    if ((int) ($row->protocol_version ?? 1) === 2) {
+      return $this->protocol->canonicalWindowsV2(
+        $type,
+        (string) $row->request_id,
+        (string) $account->machine_id,
+        (string) $account->sid_hash,
+        (string) $account->principal_type,
+        (string) $account->authority,
+        (string) $account->username,
+        (string) $row->logon_context,
+        (string) $row->nonce,
+        $timestamp,
+        $action,
+      );
+    }
+    return $this->protocol->canonical(
+      $type,
+      (string) $row->request_id,
+      (string) $account->machine_id,
+      (string) $account->username,
+      (string) $row->nonce,
+      $timestamp,
+      $action,
+    );
   }
 
 }

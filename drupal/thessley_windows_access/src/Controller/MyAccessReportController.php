@@ -37,7 +37,9 @@ final class MyAccessReportController extends ControllerBase {
         }
         $accounts[$id] = [
           'computer' => (string) ($item->hostname ?: $item->machine_id),
-          'username' => (string) $item->username,
+          'username' => !empty($item->authority)
+            ? (string) $item->authority . '\\' . (string) $item->username
+            : (string) $item->username,
           'status' => $item->revoked !== NULL ? $this->t('Revoked') : (string) $item->status,
           'last_seen' => $item->last_seen
             ? \Drupal::service('date.formatter')->format((int) $item->last_seen, 'short')
