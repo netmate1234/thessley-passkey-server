@@ -169,7 +169,11 @@ final class MyAccessReportController extends ControllerBase {
       $card = [
         '#type' => 'container',
         '#attributes' => ['class' => ['thessley-record-card']],
-        'title' => ['#plain_text' => $record['title'], '#wrapper_attributes' => ['class' => ['thessley-record-card-title']]],
+        'title' => [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['thessley-record-card-title']],
+          'text' => ['#plain_text' => $record['title']],
+        ],
         'fields' => ['#type' => 'container', '#attributes' => ['class' => ['thessley-record-fields']]],
       ];
       $field_index = 0;
