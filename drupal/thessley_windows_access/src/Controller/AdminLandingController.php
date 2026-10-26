@@ -4,11 +4,19 @@ namespace Drupal\thessley_windows_access\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Link;
+use Drupal\thessley_windows_access\WindowsAccessStore;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Windows Access landing page for Drupal administrators.
  */
 final class AdminLandingController extends ControllerBase {
+
+  public function __construct(protected WindowsAccessStore $store) {}
+
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get('thessley_windows_access.store'));
+  }
 
   public function overview(): array {
     $items = [
@@ -56,24 +64,7 @@ final class AdminLandingController extends ControllerBase {
       ];
     }
 
-    if ($this->currentUser()->isAuthenticated()) {
-      $cards['my_report'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['thessley-windows-access-card']],
-        'title' => [
-          '#type' => 'html_tag',
-          '#tag' => 'h2',
-          '#value' => $this->t('Your linked data'),
-        ],
-        'description' => [
-          '#type' => 'item',
-          '#markup' => $this->t('View only the Windows accounts, phone count, PC reports, and Drupal groups linked to your sign-in.'),
-        ],
-        'link' => Link::createFromRoute($this->t('Open my report'), 'thessley_windows_access.my_report')->toRenderable(),
-      ];
-    }
-
-    return [
+    $build = [
       '#attached' => ['library' => ['thessley_windows_access/admin']],
       'intro' => [
         '#type' => 'item',
@@ -85,6 +76,21 @@ final class AdminLandingController extends ControllerBase {
         'items' => $cards,
       ],
     ];
+
+    if ($this->currentUser()->isAuthenticated()) {
+      $build['my_report'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['thessley-windows-access-my-report']],
+        'title' => [
+          '#type' => 'html_tag',
+          '#tag' => 'h2',
+          '#value' => $this->t('Your linked data'),
+        ],
+        'report' => (new MyAccessReportController($this->store))->buildForCurrentUser(),
+      ];
+    }
+
+    return $build;
   }
 
 }

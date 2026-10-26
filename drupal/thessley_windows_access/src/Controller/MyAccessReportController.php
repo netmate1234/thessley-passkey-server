@@ -18,6 +18,11 @@ final class MyAccessReportController extends ControllerBase {
   }
 
   public function overview(): array {
+    return $this->buildForCurrentUser();
+  }
+
+  /** Builds the signed-in user's report for use on the landing page too. */
+  public function buildForCurrentUser(): array {
     $uid = (int) $this->currentUser()->id();
     $accounts = [];
     foreach ($this->store->accountInventoryForUser($uid) as $item) {
