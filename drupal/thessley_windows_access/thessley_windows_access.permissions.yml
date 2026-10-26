@@ -1,0 +1,8 @@
+administer thessley windows access:
+  title: 'Administer Thessley Windows Access'
+  description: 'Manage Windows computers, account bindings, groups, resources, and access policy.'
+  restrict access: true
+
+use thessley windows access:
+  title: 'Use Thessley Windows Access'
+  description: 'Use an enrolled Thessley Windows account for PAM approvals and protected resources.'

@@ -1,0 +1,95 @@
+thessley_windows_access.admin:
+  path: '/admin/config/people/thessley-windows-access'
+  defaults:
+    _form: '\Drupal\thessley_windows_access\Form\SettingsForm'
+    _title: 'Thessley Windows Access'
+  requirements:
+    _permission: 'administer thessley windows access'
+
+thessley_windows_access.enroll:
+  path: '/admin/config/people/thessley-windows-access/enroll'
+  defaults:
+    _form: '\Drupal\thessley_windows_access\Form\EnrollmentForm'
+    _title: 'Enroll a Windows account'
+  requirements:
+    _permission: 'administer thessley windows access'
+
+thessley_windows_access.policy:
+  path: '/admin/config/people/thessley-windows-access/policy'
+  defaults:
+    _form: '\Drupal\thessley_windows_access\Form\PolicyForm'
+    _title: 'Windows group and resource access'
+  requirements:
+    _permission: 'administer thessley windows access'
+
+thessley_windows_access.inventory:
+  path: '/admin/config/people/thessley-windows-access/inventory'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\InventoryController::overview'
+    _title: 'Windows account inventory'
+  requirements:
+    _permission: 'administer thessley windows access'
+
+# Phone responses use the existing Android PAM wire contract and are bound to
+# a short-lived request ID, nonce, machine ID, and Windows account.
+thessley_windows_access.pam_respond:
+  path: '/thessley-pam/v1/{type}/{id}/respond'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\PamApiController::respond'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    type: 'enroll|sudo|login'
+    id: '[A-Za-z0-9_-]{8,64}'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_challenge:
+  path: '/thessley-windows/v1/{machine_id}/{username}/challenge/{type}'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::challenge'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    username: '[a-z_][a-z0-9_.-]{0,31}'
+    type: 'login|sudo'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_status:
+  path: '/thessley-windows/v1/{machine_id}/{username}/requests/{request_id}/status'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::status'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    username: '[a-z_][a-z0-9_.-]{0,31}'
+    request_id: '[A-Za-z0-9_-]{32,64}'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_policy:
+  path: '/thessley-windows/v1/{machine_id}/{username}/policy'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::policy'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    username: '[a-z_][a-z0-9_.-]{0,31}'
+  options:
+    no_cache: TRUE
+
+thessley_windows_access.agent_inventory:
+  path: '/thessley-windows/v1/{machine_id}/{username}/inventory'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::inventory'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+    machine_id: '[a-f0-9]{32}'
+    username: '[a-z_][a-z0-9_.-]{0,31}'
+  options:
+    no_cache: TRUE
