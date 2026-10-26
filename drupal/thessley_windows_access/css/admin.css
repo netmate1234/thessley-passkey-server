@@ -108,6 +108,10 @@
   margin-block: 0 1rem;
 }
 
+.thessley-copy-button {
+  margin-block: 0.35rem 0.75rem;
+}
+
 .thessley-windows-access-dashboard {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));

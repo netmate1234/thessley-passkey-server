@@ -19,6 +19,75 @@ final class WindowsAccessStore {
     return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
   }
 
+  /** Creates a ten-minute enrollment code and binds it to the chosen PC IP/account. */
+  public function createPairing(string $client_ip, string $username, int $uid): string {
+    $now = $this->time->getRequestTime();
+    for ($attempt = 0; $attempt < 3; $attempt++) {
+      $code = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+      try {
+        $this->db->insert('thessley_win_pairings')->fields([
+          'code_hash' => hash('sha256', $code),
+          'client_ip' => $client_ip,
+          'username' => $username,
+          'uid' => $uid,
+          'status' => 'pending',
+          'created' => $now,
+          'expires' => $now + 600,
+        ])->execute();
+        return $code;
+      }
+      catch (\Throwable $e) {
+        if ($attempt === 2) {
+          throw $e;
+        }
+      }
+    }
+    throw new \RuntimeException('Could not create a unique enrollment code.');
+  }
+
+  /** Consumes a one-time pairing and creates the pending account and phone request atomically. */
+  public function completePairing(string $code, string $client_ip, string $machine_id, string $hostname, string $username, string $sid_hash, string $public_key): ?array {
+    $transaction = $this->db->startTransaction();
+    $pairing = $this->db->select('thessley_win_pairings', 'p')
+      ->fields('p')
+      ->condition('code_hash', hash('sha256', $code))
+      ->forUpdate()
+      ->execute()
+      ->fetchObject();
+    $now = $this->time->getRequestTime();
+    if (!$pairing || $pairing->status !== 'pending' || (int) $pairing->expires < $now
+      || !hash_equals((string) $pairing->client_ip, $client_ip)
+      || !hash_equals((string) $pairing->username, $username)) {
+      $transaction->rollBack();
+      return NULL;
+    }
+    $active_uid = $this->db->select('users_field_data', 'u')
+      ->fields('u', ['uid'])
+      ->condition('uid', (int) $pairing->uid)
+      ->condition('status', 1)
+      ->execute()
+      ->fetchField();
+    if (!$active_uid) {
+      $transaction->rollBack();
+      return NULL;
+    }
+    $this->createMachine($machine_id, $hostname);
+    $account_id = $this->createAccount($machine_id, $sid_hash, $username, $username, (int) $pairing->uid, $public_key);
+    $request = $this->createRequest($account_id, 'enroll', 300);
+    $this->db->update('thessley_win_pairings')
+      ->fields(['status' => 'used', 'used' => $now])
+      ->condition('code_hash', hash('sha256', $code))
+      ->execute();
+    unset($transaction);
+    return ['account_id' => $account_id, 'uid' => (int) $pairing->uid, 'request' => $request];
+  }
+
+  public function pruneExpiredPairings(): int {
+    return (int) $this->db->delete('thessley_win_pairings')
+      ->condition('expires', $this->time->getRequestTime(), '<')
+      ->execute();
+  }
+
   public function createMachine(string $machine_id, string $hostname): void {
     $existing = $this->db->select('thessley_win_machines', 'm')
       ->fields('m', ['status', 'revoked'])

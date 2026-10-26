@@ -107,6 +107,22 @@ function thessley_windows_access_schema(): array {
     ],
   ];
 
+  $schema['thessley_win_pairings'] = [
+    'description' => 'Short-lived, single-use Windows PC enrollment codes bound to an administrator-selected client IP and Drupal identity.',
+    'fields' => [
+      'code_hash' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'binary' => TRUE],
+      'client_ip' => ['type' => 'varchar', 'length' => 45, 'not null' => TRUE],
+      'username' => ['type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'binary' => TRUE],
+      'uid' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'status' => ['type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => 'pending'],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'expires' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'used' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+    ],
+    'primary key' => ['code_hash'],
+    'indexes' => ['status_expires' => ['status', 'expires'], 'client_user' => ['client_ip', 'username']],
+  ];
+
   $schema['thessley_win_resources'] = [
     'description' => 'Protected resources that enforce Thessley Windows Access policy.',
     'fields' => [
@@ -247,8 +263,22 @@ function thessley_windows_access_update_10001(): string {
 }
 
 /**
+ * Add one-time PC pairing codes used by the streamlined enrollment flow.
+ */
+function thessley_windows_access_update_10002(): string {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('thessley_win_pairings')) {
+    $definitions = thessley_windows_access_schema();
+    $schema->createTable('thessley_win_pairings', $definitions['thessley_win_pairings']);
+  }
+  return 'Added the short-lived Windows PC enrollment pairing store.';
+}
+
+/**
  * Implements hook_cron().
  */
 function thessley_windows_access_cron(): void {
-  \Drupal::service('thessley_windows_access.store')->pruneExpiredRequests();
+  $store = \Drupal::service('thessley_windows_access.store');
+  $store->pruneExpiredRequests();
+  $store->pruneExpiredPairings();
 }

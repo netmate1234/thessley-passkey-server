@@ -31,6 +31,14 @@ keyboard and touch use. Changes are audited. Drupal administrator accounts
 are excluded from membership editing so they cannot accidentally lose site
 administration access.
 
+To enroll a PC, open **Enroll Windows account**, enter its reachable IPv4
+address and local account name, then select the Drupal identity. Copy the
+generated one-time PowerShell command and run it as Administrator on that PC.
+The helper sends its machine ID, SID hash, and public key over pinned HTTPS;
+the pairing code is single-use, expires after ten minutes, and is bound to the
+source IP entered in Drupal. The helper displays the phone enrollment QR when
+the registration completes. The private key stays on the PC.
+
 Signed-in users see **Your linked data** directly on the Windows Access landing
 page. It lists only Windows account bindings owned by their Drupal user, their
 role groups and effective resource rights, active enrolled-phone count, and

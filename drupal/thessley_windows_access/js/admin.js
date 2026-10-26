@@ -13,6 +13,32 @@
     }
   };
 
+  Drupal.behaviors.thessleyWindowsAccessCopy = {
+    attach: function (context) {
+      once('thessley-windows-access-copy', 'textarea.thessley-copy-command', context).forEach(function (field) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'button thessley-copy-button';
+        button.textContent = '▢ ' + Drupal.t('Copy command');
+        button.addEventListener('click', function () {
+          var copied = function () { button.textContent = Drupal.t('Copied'); };
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(field.value).then(copied, function () {
+              field.focus();
+              field.select();
+              if (document.execCommand('copy')) { copied(); }
+            });
+          } else {
+            field.focus();
+            field.select();
+            if (document.execCommand('copy')) { copied(); }
+          }
+        });
+        field.insertAdjacentElement('afterend', button);
+      });
+    }
+  };
+
   Drupal.behaviors.thessleyWindowsAccessGroups = {
     attach: function (context) {
       once('thessley-windows-access-groups', 'form.thessley-policy-editor', context).forEach(function (editor) {

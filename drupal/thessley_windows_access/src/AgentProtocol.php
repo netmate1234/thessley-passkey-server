@@ -33,6 +33,14 @@ final class AgentProtocol {
     return $this->canonical(['inventory', $machine_id, $username, (string) $timestamp, $payload_hash]);
   }
 
+  public function pairing(string $pair_code, string $machine_id, string $username, string $sid_hash, string $public_key_hash): string {
+    if (!preg_match('/^\d{8}$/', $pair_code) || !preg_match('/^[a-f0-9]{64}$/', $sid_hash)
+      || !preg_match('/^[a-f0-9]{64}$/', $public_key_hash)) {
+      throw new \InvalidArgumentException('Invalid Windows pairing proof.');
+    }
+    return $this->canonical(['pair', $pair_code, $machine_id, $username, $sid_hash, $public_key_hash]);
+  }
+
   public function verify(string $public_key, string $message, string $signature): bool {
     return $this->crypto->verify($public_key, $message, $signature);
   }

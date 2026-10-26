@@ -119,3 +119,13 @@ thessley_windows_access.agent_inventory:
     username: '[a-z_][a-z0-9_.-]{0,31}'
   options:
     no_cache: TRUE
+
+thessley_windows_access.agent_pair:
+  path: '/thessley-windows/v1/pair'
+  defaults:
+    _controller: '\Drupal\thessley_windows_access\Controller\AgentApiController::pair'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE

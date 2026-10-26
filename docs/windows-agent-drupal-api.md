@@ -39,6 +39,37 @@ signature. Timestamps are Unix seconds; requests outside a 60-second window
 are rejected. All endpoints require HTTPS and never accept a public key from
 the request body as its own trust anchor.
 
+## First PC enrollment
+
+An administrator starts enrollment in **Windows Access → Enroll account** by
+entering the PC's reachable IPv4 address, its local account name, and the
+Drupal identity to link. Drupal creates an eight-digit code that expires in
+ten minutes. The code is stored as a SHA-256 digest and is bound to that
+account and the exact source IP.
+
+The copied PowerShell command runs `thessley-pam-win drupal-enroll` on the PC.
+The helper creates or reuses its protected P-256 key and posts:
+
+    POST /thessley-windows/v1/pair
+
+    {
+      "pair_code": "01234567",
+      "machine_id": "32-character-machine-id",
+      "hostname": "PC-NAME",
+      "username": "localuser",
+      "sid_sha256": "64-character-sid-digest",
+      "public_key_b64_der": "base64-DER-public-key",
+      "signature": "base64-DER-ECDSA"
+    }
+
+The signature covers the pairing code, machine ID, account name, SID digest,
+and public-key digest. The pairing code's server-side ten-minute expiry avoids
+requiring a synchronized Windows clock for initial enrollment. Drupal also
+checks the observed client IP, rate limit, active Drupal identity, and one-use
+status before creating the pending account and phone enrollment request. The
+response contains the phone app link; the Windows helper renders its QR
+locally. The agent private key never crosses the network.
+
 ## Routes
 
 ### Start phone approval

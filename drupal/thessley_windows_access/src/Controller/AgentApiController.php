@@ -38,6 +38,80 @@ final class AgentApiController extends ControllerBase {
     );
   }
 
+  /** Accepts metadata from the Windows helper using an IP-bound one-time code. */
+  public function pair(Request $request): JsonResponse {
+    $body = $this->jsonBody($request);
+    if ($body instanceof JsonResponse) {
+      return $body;
+    }
+    $code = is_string($body['pair_code'] ?? NULL) ? $body['pair_code'] : '';
+    $machine_id = is_string($body['machine_id'] ?? NULL) ? strtolower($body['machine_id']) : '';
+    $hostname = is_string($body['hostname'] ?? NULL) ? trim($body['hostname']) : '';
+    $username = is_string($body['username'] ?? NULL) ? strtolower(trim($body['username'])) : '';
+    $sid_hash = is_string($body['sid_sha256'] ?? NULL) ? strtolower($body['sid_sha256']) : '';
+    $public_key = is_string($body['public_key_b64_der'] ?? NULL) ? preg_replace('/\s+/', '', $body['public_key_b64_der']) : '';
+    $signature = is_string($body['signature'] ?? NULL) ? $body['signature'] : '';
+    $key_hash = hash('sha256', $public_key);
+    if (!preg_match('/^\d{8}$/', $code) || !preg_match('/^[a-f0-9]{32}$/', $machine_id)
+      || !preg_match('/^(?=.{1,64}$)[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/', $hostname)
+      || !preg_match('/^[a-z_][a-z0-9_.-]{0,31}$/', $username)
+      || !preg_match('/^[a-f0-9]{64}$/', $sid_hash) || !$public_key
+      || !$this->pam->validPublicKey($public_key)) {
+      return $this->reply(['result' => 'error', 'message' => 'Invalid or expired Windows pairing request.'], 400);
+    }
+    try {
+      $message = $this->protocol->pairing($code, $machine_id, $username, $sid_hash, $key_hash);
+    }
+    catch (\InvalidArgumentException) {
+      return $this->reply(['result' => 'error', 'message' => 'Invalid Windows pairing proof.'], 400);
+    }
+    if (!$this->protocol->verify($public_key, $message, $signature)) {
+      return $this->reply(['result' => 'error', 'message' => 'Windows helper key proof failed.'], 401);
+    }
+    $ip = (string) ($request->getClientIp() ?: 'unknown');
+    if (preg_match('/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i', $ip, $mapped)) {
+      $ip = $mapped[1];
+    }
+    if (!$this->flood->isAllowed('thessley_windows_pair', 5, 600, $ip)) {
+      return $this->reply(['result' => 'error', 'message' => 'Too many PC enrollment attempts. Try again later.'], 429);
+    }
+    $this->flood->register('thessley_windows_pair', 600, $ip);
+    $settings = $this->configFactoryService->get('thessley_windows_access.settings');
+    $origin = parse_url((string) $settings->get('public_url'));
+    $fingerprint = strtolower((string) $settings->get('tls_sha256'));
+    if (!$origin || empty($origin['host']) || !$this->validFingerprint($fingerprint)) {
+      return $this->reply(['result' => 'error', 'message' => 'The phone approval endpoint is not configured.'], 503);
+    }
+    try {
+      $result = $this->store->completePairing($code, $ip, $machine_id, $hostname, $username, $sid_hash, $public_key);
+    }
+    catch (\Throwable $e) {
+      $this->getLogger('thessley_windows_access')->warning('Windows PC pairing failed: @type', ['@type' => get_class($e)]);
+      return $this->reply(['result' => 'error', 'message' => 'The PC could not be enrolled. Check the pairing details and try again.'], 409);
+    }
+    if (!$result) {
+      return $this->reply(['result' => 'error', 'message' => 'Pairing code is wrong, expired, already used, or came from a different IP.'], 403);
+    }
+    $pending = $result['request'];
+    $query = [
+      'h' => $origin['host'],
+      'p' => isset($origin['port']) ? (int) $origin['port'] : 443,
+      'fp' => $fingerprint,
+      'n' => $pending['nonce'],
+      'id' => $pending['request_id'],
+      'm' => $machine_id,
+      'hn' => $hostname,
+      'u' => $username,
+    ];
+    return $this->reply([
+      'result' => 'ok',
+      'expires_in' => $pending['expires_in'],
+      'app_link' => 'thessleypam://enroll?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986),
+      'machine' => $hostname,
+      'account' => $username,
+    ]);
+  }
+
   /**
    * Starts a short-lived, signed phone challenge for an enrolled account.
    */
