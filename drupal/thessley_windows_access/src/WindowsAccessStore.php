@@ -426,7 +426,16 @@ final class WindowsAccessStore {
    * immediately and a stale Windows-side challenge cannot bypass Drupal.
    */
   public function userHasGrant(int $uid, string $resource_name, string $action): bool {
-    if ($uid <= 0 || !in_array($action, ['windows.login', 'windows.local_admin', 'access', 'connect', 'download'], TRUE)) {
+    if ($uid <= 0 || !in_array($action, [
+      'windows.login',
+      'windows.local_admin',
+      'windows.remote_desktop',
+      'windows.event_log_readers',
+      'windows.remote_management',
+      'access',
+      'connect',
+      'download',
+    ], TRUE)) {
       return FALSE;
     }
     $query = $this->db->select('thessley_win_grants', 'g')->fields('g', ['id']);
@@ -447,7 +456,16 @@ final class WindowsAccessStore {
    * Replaces one role's grants in one transaction and audits the change.
    */
   public function replaceRoleGrants(string $role_id, array $grants, int $actor_uid): void {
-    $allowed_actions = ['windows.login', 'windows.local_admin', 'access', 'connect', 'download'];
+    $allowed_actions = [
+      'windows.login',
+      'windows.local_admin',
+      'windows.remote_desktop',
+      'windows.event_log_readers',
+      'windows.remote_management',
+      'access',
+      'connect',
+      'download',
+    ];
     $normalized = [];
     foreach ($grants as $grant) {
       if (!is_array($grant) || !isset($grant['resource_id'], $grant['action'])) {

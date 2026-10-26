@@ -128,7 +128,7 @@ final class PolicyForm extends FormBase {
       '#open' => TRUE,
       'help' => [
         '#type' => 'item',
-        '#markup' => $this->t('Select rights for each group. Windows sign-in and Windows local administrator access are separate. A local administrator grant only takes effect when endpoint enforcement is installed.'),
+        '#markup' => $this->t('Select rights for each group. Windows sign-in, local administrator, Remote Desktop, Remote Management, and Event Log Readers are separate grants. Endpoint enforcement applies selected local-group membership on each enrolled PC. Remote Management allows remote administration; grant it only to trusted users.'),
       ],
     ];
     $form['access_rights']['roles'] = ['#type' => 'container', '#tree' => TRUE];
@@ -230,6 +230,9 @@ final class PolicyForm extends FormBase {
       return [
         'windows.login' => $this->t('Windows sign-in'),
         'windows.local_admin' => $this->t('Windows local administrator'),
+        'windows.remote_desktop' => $this->t('Remote Desktop Users'),
+        'windows.remote_management' => $this->t('Remote Management Users'),
+        'windows.event_log_readers' => $this->t('Event Log Readers'),
       ];
     }
     if ($type === 'vpn') {

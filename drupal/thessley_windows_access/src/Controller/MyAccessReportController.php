@@ -75,6 +75,9 @@ final class MyAccessReportController extends ControllerBase {
     $action_labels = [
       'windows.login' => $this->t('Windows sign-in'),
       'windows.local_admin' => $this->t('Windows local administrator'),
+      'windows.remote_desktop' => $this->t('Remote Desktop Users'),
+      'windows.remote_management' => $this->t('Remote Management Users'),
+      'windows.event_log_readers' => $this->t('Event Log Readers'),
       'connect' => $this->t('Connect'),
       'download' => $this->t('Download'),
       'access' => $this->t('Access'),

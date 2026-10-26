@@ -16,6 +16,8 @@ This module reuses its standalone QR-rendering library only.
 - Drupal roles provide group membership. Resource grants are separate from
   sign-in approval. The `Windows Administrators` role is seeded with global
   `windows.login` and `windows.local_admin` grants for enrolled computers.
+  Computer grants can also manage Remote Desktop Users, Event Log Readers, and
+  Remote Management Users independently.
 
 ## Current vertical slice
 
@@ -73,8 +75,10 @@ docs/windows-agent-drupal-api.md.
 
 The Windows service syncs each configured Drupal binding immediately after
 service startup and every 15 minutes. It uploads direct local-group inventory,
-pulls current Drupal roles and grants, and reconciles only local
-Administrators membership that it previously added for that mapped account.
+pulls current Drupal roles and grants, and reconciles only supported local
+group memberships that it previously added for that mapped account. Supported
+groups are Administrators, Remote Desktop Users, Event Log Readers, and Remote
+Management Users. Pre-existing membership is never claimed or removed.
 The first `Windows Access` inventory row should show its group report after the
 first successful sync. Sign-in grants are checked directly by Drupal for every
 login request, so stale local policy cannot grant a new sign-in.
@@ -91,9 +95,9 @@ This remains a development prototype. Drupal account bindings are enrolled
 separately for each Windows computer; one Drupal identity may link to a local
 account with the same name on many computers, but each PC has its own SID,
 agent key, and phone enrollment. Drupal role grants can apply to all enrolled
-computers. The service currently reconciles only the local Administrators
-group, not arbitrary local groups. The phone app also needs a configured
-trusted Drupal PAM origin before it can use a public server address. Keep the
-existing Windows PIN/password providers available.
+computers. Local-group enforcement is limited to the four documented built-in
+groups; arbitrary local groups are not configurable. The phone app also needs
+a configured trusted Drupal PAM origin before it can use a public server
+address. Keep the existing Windows PIN/password providers available.
 
 Install only on a Drupal development copy while these flows are built out.

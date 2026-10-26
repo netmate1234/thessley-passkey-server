@@ -194,10 +194,21 @@ final class AgentApiController extends ControllerBase {
       $roles[] = ['id' => $role_id, 'label' => $role ? $role->label() : $role_id];
     }
     $actions = [];
-    foreach (['windows.login', 'windows.local_admin'] as $action) {
+    $windows_actions = [
+      'windows.login' => NULL,
+      'windows.local_admin' => 'Administrators',
+      'windows.remote_desktop' => 'Remote Desktop Users',
+      'windows.event_log_readers' => 'Event Log Readers',
+      'windows.remote_management' => 'Remote Management Users',
+    ];
+    $managed_local_groups = [];
+    foreach ($windows_actions as $action => $local_group) {
       if ($this->store->userHasGrant((int) $account->uid, 'computer_' . $machine_id, $action)
         || $this->store->userHasGrant((int) $account->uid, 'all_windows', $action)) {
         $actions[] = $action;
+        if ($local_group !== NULL) {
+          $managed_local_groups[] = $local_group;
+        }
       }
     }
     return $this->reply([
@@ -205,7 +216,7 @@ final class AgentApiController extends ControllerBase {
       'identity_active' => TRUE,
       'groups' => $roles,
       'actions' => $actions,
-      'managed_local_groups' => in_array('windows.local_admin', $actions, TRUE) ? ['Administrators'] : [],
+      'managed_local_groups' => $managed_local_groups,
     ]);
   }
 

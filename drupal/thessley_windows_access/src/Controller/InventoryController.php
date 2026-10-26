@@ -81,7 +81,7 @@ final class InventoryController extends ControllerBase {
         'settings' => Link::createFromRoute($this->t('Server settings'), 'thessley_windows_access.admin')->toRenderable(),
       ],
       'intro' => [
-        '#markup' => $this->t('PC-reported Windows groups are inventory only. Drupal roles and resource grants control Thessley access. The local Administrators group is changed only by an endpoint agent after an explicit grant.'),
+        '#markup' => $this->t('PC-reported Windows groups are inventory. Drupal roles and resource grants control Thessley access. The endpoint agent changes membership only in explicitly granted supported groups: Administrators, Remote Desktop Users, Event Log Readers, and Remote Management Users.'),
       ],
       'inventory' => [
         '#type' => 'table',

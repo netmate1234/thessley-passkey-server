@@ -80,16 +80,17 @@ revocations, and unknown statuses as refusal.
 POST /thessley-windows/v1/{machine_id}/{username}/policy
 
 JSON body is timestamp plus an agent signature over the policy message. The
-response contains the mapped Drupal user's roles and effective windows.login
-and windows.local_admin actions for that computer. managed_local_groups
-contains Administrators only when the latter action is currently granted.
-The Windows service pulls this endpoint once after startup and every 15
-minutes for each configured binding. It applies only the supported
-Administrators membership. If the user was already a direct member before
-Thessley added them, the service does not claim or later remove that membership.
-If Thessley added the member, the service records ownership locally and removes
-only that membership after the Drupal grant is withdrawn. It never removes
-other local administrators.
+response contains the mapped Drupal user's roles and effective computer
+actions. `managed_local_groups` may contain only the stable built-in groups
+`Administrators`, `Remote Desktop Users`, `Event Log Readers`, and
+`Remote Management Users`, each corresponding to its explicit Drupal action:
+`windows.local_admin`, `windows.remote_desktop`,
+`windows.event_log_readers`, and `windows.remote_management`. The agent rejects
+unknown groups or inconsistent action/group responses. The Windows service
+pulls this endpoint once after startup and every 15 minutes for each configured
+binding. It records ownership before adding a group membership and removes
+only memberships it added when Drupal withdraws the grant. Membership that
+existed before the grant is never claimed or removed.
 
 ### Report Windows local groups
 
@@ -138,8 +139,8 @@ groups never grant Drupal rights.
   change.
 
 For the prototype, test only a low-privilege mapped account with the
-computer-scoped `windows.login` grant. Granting `windows.local_admin` adds the
-mapped Windows account to local Administrators after a successful policy sync.
+computer-scoped `windows.login` grant. Granting a local-group action adds the
+mapped Windows account to that supported group after a successful policy sync.
 Keep the normal PIN/password provider available until deployment rollback and
 recovery are integrated and proven.
 
