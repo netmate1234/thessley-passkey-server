@@ -5,7 +5,7 @@ namespace Drupal\thessley_windows_access\Controller;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Flood\FloodInterface;
-use Drupal\Core\Datetime\TimeInterface;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\thessley_windows_access\AgentProtocol;
 use Drupal\thessley_windows_access\PamProtocol;
 use Drupal\thessley_windows_access\WindowsAccessStore;
