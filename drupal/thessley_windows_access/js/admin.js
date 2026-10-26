@@ -15,7 +15,7 @@
 
   Drupal.behaviors.thessleyWindowsAccessGroups = {
     attach: function (context) {
-      once('thessley-windows-access-groups', '.thessley-membership-editor', context).forEach(function (editor) {
+      once('thessley-windows-access-groups', 'form.thessley-policy-editor', context).forEach(function (editor) {
         var announcement = editor.querySelector('[data-thessley-announcement]');
 
         editor.querySelectorAll('[data-thessley-uid]').forEach(function (person) {
@@ -31,7 +31,7 @@
 
         editor.querySelectorAll('[data-thessley-role]').forEach(function (group) {
           group.addEventListener('dragover', function (event) {
-            if (event.dataTransfer.types.indexOf('text/plain') !== -1) {
+            if (Array.prototype.indexOf.call(event.dataTransfer.types, 'text/plain') !== -1) {
               event.preventDefault();
               event.dataTransfer.dropEffect = 'copy';
               group.classList.add('is-drop-target');
@@ -55,6 +55,52 @@
               match.dispatchEvent(new Event('change', { bubbles: true }));
               if (announcement) {
                 announcement.textContent = Drupal.t('Person added to @group.', {'@group': group.querySelector('legend').textContent.trim()});
+              }
+            }
+          });
+        });
+
+        editor.querySelectorAll('[data-thessley-grant]').forEach(function (right) {
+          right.addEventListener('dragstart', function (event) {
+            event.dataTransfer.effectAllowed = 'copy';
+            event.dataTransfer.setData('application/x-thessley-grant', right.getAttribute('data-thessley-grant'));
+            right.classList.add('is-dragging');
+          });
+          right.addEventListener('dragend', function () {
+            right.classList.remove('is-dragging');
+          });
+        });
+
+        editor.querySelectorAll('[data-thessley-grant-role]').forEach(function (group) {
+          group.addEventListener('dragover', function (event) {
+            if (Array.prototype.indexOf.call(event.dataTransfer.types, 'application/x-thessley-grant') !== -1) {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'copy';
+              group.classList.add('is-grant-drop-target');
+            }
+          });
+          group.addEventListener('dragleave', function (event) {
+            if (!group.contains(event.relatedTarget)) {
+              group.classList.remove('is-grant-drop-target');
+            }
+          });
+          group.addEventListener('drop', function (event) {
+            var grantId = event.dataTransfer.getData('application/x-thessley-grant');
+            if (!grantId) {
+              return;
+            }
+            event.preventDefault();
+            group.classList.remove('is-grant-drop-target');
+            var checkboxes = group.querySelectorAll('input[type="checkbox"]');
+            var match = Array.prototype.find.call(checkboxes, function (checkbox) {
+              return checkbox.value === grantId;
+            });
+            if (match && !match.checked) {
+              match.checked = true;
+              match.dispatchEvent(new Event('change', { bubbles: true }));
+              if (announcement) {
+                var heading = group.querySelector('summary');
+                announcement.textContent = Drupal.t('Resource right added to @group.', {'@group': heading ? heading.textContent.trim() : Drupal.t('group')});
               }
             }
           });

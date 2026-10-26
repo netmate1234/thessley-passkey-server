@@ -12,6 +12,15 @@
   padding: 0;
 }
 
+.thessley-policy-editor .thessley-draggable-grants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  list-style: none;
+  margin: 0.4rem 0 1rem;
+  padding: 0;
+}
+
 .thessley-membership-editor .thessley-draggable-person {
   cursor: grab;
   border: 1px solid #8c8f94;
@@ -23,13 +32,42 @@
 }
 
 .thessley-membership-editor .thessley-draggable-person:focus-visible,
-.thessley-membership-editor .thessley-draggable-person:hover {
+.thessley-membership-editor .thessley-draggable-person:hover,
+.thessley-policy-editor .thessley-draggable-grant:focus-visible,
+.thessley-policy-editor .thessley-draggable-grant:hover {
   outline: 2px solid #2271b1;
   outline-offset: 2px;
 }
 
 .thessley-membership-editor .thessley-draggable-person.is-dragging {
   opacity: 0.55;
+}
+
+.thessley-policy-editor .thessley-draggable-grant {
+  cursor: grab;
+  border: 1px solid #8c8f94;
+  border-radius: 999px;
+  background: #fff;
+  color: #1d2327;
+  padding: 0.45rem 0.8rem;
+  margin: 0.15rem;
+  text-align: left;
+}
+
+.thessley-policy-editor .thessley-draggable-grant.is-dragging {
+  opacity: 0.55;
+}
+
+.thessley-policy-editor .thessley-grant-target {
+  border: 1px dashed transparent;
+  border-radius: 0.4rem;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.thessley-policy-editor .thessley-grant-target.is-grant-drop-target {
+  border-color: #2271b1;
+  background: #f0f6fc;
+  box-shadow: 0 0 0 2px #2271b1;
 }
 
 .thessley-membership-editor .thessley-access-group {
@@ -91,6 +129,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .thessley-membership-editor .thessley-access-group {
+    transition: none;
+  }
+
+  .thessley-policy-editor .thessley-grant-target {
     transition: none;
   }
 }

@@ -39,6 +39,7 @@ final class PolicyForm extends FormBase {
     uasort($users, static fn (UserInterface $a, UserInterface $b): int => strnatcasecmp($a->getAccountName(), $b->getAccountName()));
 
     $form['#attached']['library'][] = 'thessley_windows_access/admin';
+    $form['#attributes']['class'][] = 'thessley-policy-editor';
     $form['intro'] = [
       '#type' => 'item',
       '#markup' => $this->t('Manage people, access groups, and resource rights in one place. Groups are Drupal roles. Drag a person onto a group, or use the checkboxes. Then choose what each group can do on each computer or resource. Changes take effect on the next sign-in check.'),
@@ -128,28 +129,56 @@ final class PolicyForm extends FormBase {
       '#open' => TRUE,
       'help' => [
         '#type' => 'item',
-        '#markup' => $this->t('Select rights for each group. Windows sign-in, local administrator, Remote Desktop, Remote Management, and Event Log Readers are separate grants. Endpoint enforcement applies selected local-group membership on each enrolled PC. Remote Management allows remote administration; grant it only to trusted users.'),
+        '#markup' => $this->t('Drag a resource right onto a group to grant it, or use the checkboxes. Windows sign-in, local administrator, Remote Desktop, Remote Management, and Event Log Readers are separate rights. Changes take effect on the next sign-in check.'),
       ],
     ];
+    $grant_options = [];
+    foreach ($resources as $resource) {
+      foreach ($this->actionsForResource($resource->type) as $action => $label) {
+        $grant_options[(int) $resource->id . ':' . $action] = $resource->label . ' — ' . $label;
+      }
+    }
+    $form['access_rights']['grant_palette'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['thessley-grant-palette']],
+      'title' => [
+        '#type' => 'item',
+        '#title' => $this->t('Available resource rights'),
+      ],
+      'items' => [
+        '#theme' => 'item_list',
+        '#items' => [],
+        '#attributes' => ['class' => ['thessley-draggable-grants']],
+        '#empty' => $this->t('Add a computer or resource first.'),
+      ],
+    ];
+    foreach ($grant_options as $grant_id => $grant_label) {
+      $form['access_rights']['grant_palette']['items']['#items'][] = [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#value' => $grant_label,
+        '#attributes' => [
+          'type' => 'button',
+          'draggable' => 'true',
+          'class' => ['thessley-draggable-grant'],
+          'data-thessley-grant' => $grant_id,
+          'aria-label' => $this->t('Drag @right onto a group to grant it', ['@right' => $grant_label]),
+        ],
+      ];
+    }
     $form['access_rights']['roles'] = ['#type' => 'container', '#tree' => TRUE];
     foreach ($managed_roles as $role_id => $role) {
-      $options = [];
-      foreach ($resources as $resource) {
-        $actions = $this->actionsForResource($resource->type);
-        foreach ($actions as $action => $label) {
-          $options[(int) $resource->id . ':' . $action] = $resource->label . ' — ' . $label;
-        }
-      }
       $form['access_rights']['roles'][$role_id] = [
         '#type' => 'details',
         '#tree' => TRUE,
         '#title' => $role->label() . ' (' . $role_id . ')',
         '#open' => $role_id === 'windows_administrators',
+        '#attributes' => ['class' => ['thessley-grant-target'], 'data-thessley-grant-role' => (string) $role_id],
       ];
       $form['access_rights']['roles'][$role_id]['grants'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Allowed actions'),
-        '#options' => $options,
+        '#options' => $grant_options,
         '#default_value' => \Drupal::service('thessley_windows_access.store')->roleGrantValues((string) $role_id),
         '#description' => $this->t('For “All enrolled Windows computers,” sign-in authorizes the mapped Windows account. Local administrator adds that account to the computer’s Windows Administrators group when the endpoint agent is available.'),
       ];
