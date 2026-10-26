@@ -5,6 +5,7 @@ namespace Drupal\thessley_windows_access\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\user\RoleInterface;
+use Drupal\user\UserInterface;
 
 /**
  * Maps Drupal roles to Windows computers and protected resources.
@@ -16,17 +17,122 @@ final class PolicyForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state): array {
-    $roles = $this->entityTypeManager()->getStorage('user_role')->loadMultiple();
-    $resources = \Drupal::service('thessley_windows_access.store')->resources();
-    $form['intro'] = [
-      '#type' => 'item',
-      '#markup' => $this->t('Grant access to a Drupal role. Members inherit these rights on matching enrolled resources. Drupal administrators do not automatically become Windows administrators. Computer sign-in and local Windows administrator membership are separate actions.'),
-    ];
-    $form['roles'] = ['#type' => 'container', '#tree' => TRUE];
+    $roles = \Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple();
+    $store = \Drupal::service('thessley_windows_access.store');
+    $resources = $store->resources();
+    $managed_roles = [];
     foreach ($roles as $role_id => $role) {
-      if (!$role instanceof RoleInterface || $role->isAdmin()) {
+      if ($role instanceof RoleInterface && !$role->isAdmin() && !in_array((string) $role_id, ['anonymous', 'authenticated'], TRUE)) {
+        $managed_roles[$role_id] = $role;
+      }
+    }
+
+    // Drupal roles are the access groups. Let an administrator manage group
+    // membership here without having to open each Drupal user profile.
+    $users = [];
+    foreach (\Drupal::entityTypeManager()->getStorage('user')->loadByProperties(['status' => 1]) as $user) {
+      if (!$user instanceof UserInterface || (int) $user->id() <= 1 || in_array('administrator', $user->getRoles(), TRUE)) {
         continue;
       }
+      $users[(int) $user->id()] = $user;
+    }
+    uasort($users, static fn (UserInterface $a, UserInterface $b): int => strnatcasecmp($a->getAccountName(), $b->getAccountName()));
+
+    $form['#attached']['library'][] = 'thessley_windows_access/admin';
+    $form['intro'] = [
+      '#type' => 'item',
+      '#markup' => $this->t('Manage people, access groups, and resource rights in one place. Groups are Drupal roles. Drag a person onto a group, or use the checkboxes. Then choose what each group can do on each computer or resource. Changes take effect on the next sign-in check.'),
+    ];
+
+    $form['group_memberships'] = [
+      '#type' => 'details',
+      '#tree' => TRUE,
+      '#title' => $this->t('People and access groups'),
+      '#open' => TRUE,
+      '#attributes' => ['class' => ['thessley-membership-editor']],
+      'help' => [
+        '#type' => 'item',
+        '#markup' => $this->t('Drag a person from the list onto a group to add them. Clear their checkbox to remove them. Drupal administrator accounts are protected and are not listed here.'),
+      ],
+      'people' => [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['thessley-people-pool']],
+      ],
+    ];
+    $form['group_memberships']['people']['title'] = [
+      '#type' => 'item',
+      '#title' => $this->t('People'),
+    ];
+    $form['group_memberships']['people']['list'] = [
+      '#theme' => 'item_list',
+      '#items' => [],
+      '#attributes' => ['class' => ['thessley-draggable-people']],
+      '#empty' => $this->t('No active Drupal users are available.'),
+    ];
+    foreach ($users as $uid => $user) {
+      $form['group_memberships']['people']['list']['#items'][] = [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#value' => $user->getAccountName() . ' · ' . $user->getDisplayName(),
+        '#attributes' => [
+          'type' => 'button',
+          'draggable' => 'true',
+          'class' => ['thessley-draggable-person'],
+          'data-thessley-uid' => (string) $uid,
+          'aria-label' => $this->t('Drag @name to an access group', ['@name' => $user->getAccountName()]),
+        ],
+      ];
+    }
+    $form['group_memberships']['groups'] = [
+      '#type' => 'container',
+      '#tree' => TRUE,
+      '#attributes' => ['class' => ['thessley-access-groups']],
+    ];
+    foreach ($managed_roles as $role_id => $role) {
+      $members = [];
+      foreach ($users as $uid => $user) {
+        if (in_array((string) $role_id, $user->getRoles(), TRUE)) {
+          $members[] = (string) $uid;
+        }
+      }
+      $form['group_memberships']['groups'][$role_id] = [
+        '#type' => 'fieldset',
+        '#tree' => TRUE,
+        '#title' => $role->label(),
+        '#attributes' => [
+          'class' => ['thessley-access-group', 'draggable'],
+          'data-thessley-role' => (string) $role_id,
+        ],
+        'members' => [
+          '#type' => 'checkboxes',
+          '#title' => $this->t('Members'),
+          '#title_display' => 'invisible',
+          '#options' => array_map(static fn (UserInterface $account): string => $account->getAccountName(), $users),
+          '#default_value' => $members,
+          '#attributes' => ['class' => ['thessley-group-members']],
+          '#empty_value' => [],
+          '#description' => $this->t('Drop people here or select them by name.'),
+        ],
+      ];
+    }
+    $form['group_memberships']['announcement'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => ['class' => ['visually-hidden'], 'aria-live' => 'polite', 'data-thessley-announcement' => ''],
+    ];
+
+    $form['access_rights'] = [
+      '#type' => 'details',
+      '#tree' => TRUE,
+      '#title' => $this->t('Group access to computers and resources'),
+      '#open' => TRUE,
+      'help' => [
+        '#type' => 'item',
+        '#markup' => $this->t('Select rights for each group. Windows sign-in and Windows local administrator access are separate. A local administrator grant only takes effect when endpoint enforcement is installed.'),
+      ],
+    ];
+    $form['access_rights']['roles'] = ['#type' => 'container', '#tree' => TRUE];
+    foreach ($managed_roles as $role_id => $role) {
       $options = [];
       foreach ($resources as $resource) {
         $actions = $this->actionsForResource($resource->type);
@@ -34,12 +140,13 @@ final class PolicyForm extends FormBase {
           $options[(int) $resource->id . ':' . $action] = $resource->label . ' — ' . $label;
         }
       }
-      $form['roles'][$role_id] = [
+      $form['access_rights']['roles'][$role_id] = [
         '#type' => 'details',
+        '#tree' => TRUE,
         '#title' => $role->label() . ' (' . $role_id . ')',
         '#open' => $role_id === 'windows_administrators',
       ];
-      $form['roles'][$role_id]['grants'] = [
+      $form['access_rights']['roles'][$role_id]['grants'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Allowed actions'),
         '#options' => $options,
@@ -57,25 +164,65 @@ final class PolicyForm extends FormBase {
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state): void {
-    $roles = $this->entityTypeManager()->getStorage('user_role')->loadMultiple();
+    $roles = \Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple();
+    $managed_roles = [];
     foreach ($roles as $role_id => $role) {
-      if (!$role instanceof RoleInterface || $role->isAdmin()) {
+      if (!$role instanceof RoleInterface || $role->isAdmin() || in_array((string) $role_id, ['anonymous', 'authenticated'], TRUE)) {
         continue;
       }
-      $selected = $form_state->getValue(['roles', $role_id, 'grants']) ?? [];
+      $managed_roles[] = (string) $role_id;
+    }
+
+    // Preserve administrator and any role not managed by this module. The
+    // account list excludes administrator users in buildForm(), and is checked
+    // again here rather than trusting posted values.
+    $submitted_memberships = $form_state->getValue(['group_memberships', 'groups']) ?? [];
+    $user_storage = \Drupal::entityTypeManager()->getStorage('user');
+    $store = \Drupal::service('thessley_windows_access.store');
+    $actor_uid = (int) $this->currentUser()->id();
+    foreach ($user_storage->loadByProperties(['status' => 1]) as $user) {
+      if (!$user instanceof UserInterface || (int) $user->id() <= 1 || in_array('administrator', $user->getRoles(), TRUE)) {
+        continue;
+      }
+      $before = $user->getRoles();
+      foreach ($managed_roles as $role_id) {
+        $values = $submitted_memberships[$role_id]['members'] ?? [];
+        $checked = is_array($values) && in_array((string) $user->id(), $values, TRUE);
+        if ($checked && !$user->hasRole($role_id)) {
+          $user->addRole($role_id);
+        }
+        elseif (!$checked && $user->hasRole($role_id)) {
+          $user->removeRole($role_id);
+        }
+      }
+      if ($user->getRoles() !== $before) {
+        $user->save();
+        $store->audit($actor_uid, 'user_group_membership_changed', 'uid:' . $user->id(), [
+          'account' => $user->getAccountName(),
+          'roles_before' => $before,
+          'roles_after' => $user->getRoles(),
+        ]);
+      }
+    }
+
+    foreach ($roles as $role_id => $role) {
+      if (!$role instanceof RoleInterface || $role->isAdmin() || in_array((string) $role_id, ['anonymous', 'authenticated'], TRUE)) {
+        continue;
+      }
+      $selected = $form_state->getValue(['access_rights', 'roles', $role_id, 'grants']) ?? [];
       $grants = [];
       foreach (array_filter($selected) as $value) {
         if (is_string($value) && preg_match('/^(\d+):([a-z._-]+)$/', $value, $matches)) {
           $grants[] = ['resource_id' => (int) $matches[1], 'action' => $matches[2]];
         }
       }
-      \Drupal::service('thessley_windows_access.store')->replaceRoleGrants(
+      $store->replaceRoleGrants(
         (string) $role_id,
         $grants,
-        (int) $this->currentUser()->id(),
+        $actor_uid,
       );
     }
-    $this->messenger()->addStatus($this->t('Windows resource access policy saved and audited.'));
+    $this->messenger()->addStatus($this->t('Group membership and Windows resource access policy saved and audited.'));
   }
 
   private function actionsForResource(string $type): array {

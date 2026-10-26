@@ -19,6 +19,15 @@ This module reuses its standalone QR-rendering library only.
 
 ## Current vertical slice
 
+Open **Administration → Windows Access** for the management landing page, or
+open **Administration → People → Windows Access** for the account inventory.
+The landing page and module tabs link to **Accounts & computers**, **Enroll
+account**, **Groups & access**, and **Server settings**. The Groups & access page lets an administrator drag a
+Drupal user onto an access group (Drupal role), manage membership with
+checkboxes, and assign each group's computer/resource rights. Changes are
+audited. Drupal administrator accounts are excluded from that editor so they
+cannot accidentally lose site administration access.
+
 The module settings page is `/admin/config/people/thessley-windows-access`.
 Set the HTTPS PAM server URL and its SHA-256 leaf-certificate fingerprint.
 Role grants are managed separately at the Groups and resources page.

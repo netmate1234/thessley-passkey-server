@@ -2,6 +2,9 @@ admin:
   version: 1.0
   js:
     js/admin.js: {}
+  css:
+    theme:
+      css/admin.css: {}
   dependencies:
     - core/drupal
     - core/once

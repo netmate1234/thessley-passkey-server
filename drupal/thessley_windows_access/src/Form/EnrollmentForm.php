@@ -61,7 +61,7 @@ final class EnrollmentForm extends FormBase {
       '#maxlength' => 1024,
       '#description' => $this->t('Paste the public half of the account agent P-256 key. Keep its private key on the Windows computer. This key authenticates challenge and status requests; it is separate from the phone key.'),
     ];
-    $users = $this->entityTypeManager()->getStorage('user')->loadByProperties(['status' => 1]);
+    $users = \Drupal::entityTypeManager()->getStorage('user')->loadByProperties(['status' => 1]);
     $options = [];
     foreach ($users as $user) {
       if ($user instanceof UserInterface && (int) $user->id() > 0) {

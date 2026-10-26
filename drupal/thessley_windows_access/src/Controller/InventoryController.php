@@ -72,6 +72,13 @@ final class InventoryController extends ControllerBase {
 
     return [
       '#cache' => ['max-age' => 0],
+      'actions' => [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['thessley-windows-access-actions']],
+        'enroll' => Link::createFromRoute($this->t('Enroll a Windows account'), 'thessley_windows_access.enroll')->toRenderable(),
+        'groups' => Link::createFromRoute($this->t('Manage groups and access'), 'thessley_windows_access.policy')->toRenderable(),
+        'settings' => Link::createFromRoute($this->t('Server settings'), 'thessley_windows_access.admin')->toRenderable(),
+      ],
       'intro' => [
         '#markup' => $this->t('PC-reported Windows groups are inventory only. Drupal roles and resource grants control Thessley access. The local Administrators group is changed only by an endpoint agent after an explicit grant.'),
       ],

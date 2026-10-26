@@ -12,4 +12,54 @@
       });
     }
   };
+
+  Drupal.behaviors.thessleyWindowsAccessGroups = {
+    attach: function (context) {
+      once('thessley-windows-access-groups', '.thessley-membership-editor', context).forEach(function (editor) {
+        var announcement = editor.querySelector('[data-thessley-announcement]');
+
+        editor.querySelectorAll('[data-thessley-uid]').forEach(function (person) {
+          person.addEventListener('dragstart', function (event) {
+            event.dataTransfer.effectAllowed = 'copy';
+            event.dataTransfer.setData('text/plain', person.getAttribute('data-thessley-uid'));
+            person.classList.add('is-dragging');
+          });
+          person.addEventListener('dragend', function () {
+            person.classList.remove('is-dragging');
+          });
+        });
+
+        editor.querySelectorAll('[data-thessley-role]').forEach(function (group) {
+          group.addEventListener('dragover', function (event) {
+            if (event.dataTransfer.types.indexOf('text/plain') !== -1) {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'copy';
+              group.classList.add('is-drop-target');
+            }
+          });
+          group.addEventListener('dragleave', function (event) {
+            if (!group.contains(event.relatedTarget)) {
+              group.classList.remove('is-drop-target');
+            }
+          });
+          group.addEventListener('drop', function (event) {
+            event.preventDefault();
+            group.classList.remove('is-drop-target');
+            var uid = event.dataTransfer.getData('text/plain');
+            var checkboxes = group.querySelectorAll('input[type="checkbox"]');
+            var match = Array.prototype.find.call(checkboxes, function (checkbox) {
+              return checkbox.value === uid;
+            });
+            if (match && !match.checked) {
+              match.checked = true;
+              match.dispatchEvent(new Event('change', { bubbles: true }));
+              if (announcement) {
+                announcement.textContent = Drupal.t('Person added to @group.', {'@group': group.querySelector('legend').textContent.trim()});
+              }
+            }
+          });
+        });
+      });
+    }
+  };
 })(Drupal, once, drupalSettings);

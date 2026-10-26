@@ -5,6 +5,20 @@ thessley_windows_access.admin:
   parent: system.admin_config_people
   weight: 30
 
+thessley_windows_access.admin_landing:
+  title: 'Windows Access'
+  description: 'Manage Windows accounts, access groups, and resource rights.'
+  route_name: thessley_windows_access.dashboard
+  parent: system.admin
+  weight: 30
+
+thessley_windows_access.people:
+  title: 'Windows Access'
+  description: 'Manage enrolled Windows accounts, phone credentials, enrollment, groups, and access rights.'
+  route_name: thessley_windows_access.inventory
+  parent: entity.user.collection
+  weight: 50
+
 thessley_windows_access.enroll:
   title: 'Enroll Windows account'
   description: 'Create a PAM enrollment QR for one Windows account on one computer.'
