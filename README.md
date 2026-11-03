@@ -2,7 +2,7 @@
 
 ![License](https://img.shields.io/badge/license-GPL--2.0--or--later-7c6cf0?style=flat-square) ![WordPress](https://img.shields.io/badge/WordPress-plugin-21759b?style=flat-square) ![Drupal](https://img.shields.io/badge/Drupal-10.3%20%2F%2011-0678be?style=flat-square) ![Deck](https://img.shields.io/badge/deck-7c6cf0?style=flat-square)
 
-[](https://netmate1234.github.io/thessley-passkey-server/)
+[![banner](docs/preview/hero.png)](https://netmate1234.github.io/thessley-passkey-server/)
 
 The server half of the protocol in PHP: a WordPress reference implementation and a standalone Drupal module, speaking the same wire format.
 
@@ -36,6 +36,26 @@ Both servers can also verify that a key lives in a **TPM 2.0 chip** (optional, s
 Start with `PROTOCOL.md`, then `wordpress/passkey-login/class-crypto.php`
 (the signed string and verification) and `module.php` (the endpoints). The
 Drupal module is the cleaner, self-contained version of the same logic.
+
+## Quick install
+
+Drupal:
+
+```sh
+git clone https://github.com/netmate1234/thessley-passkey-server.git
+cp -r thessley-passkey-server/drupal/thessley_passkey /path/to/drupal/web/modules/custom/
+drush en thessley_passkey
+```
+
+WordPress: use the packaged plugin, which contains this module plus the helpers it needs:
+
+```sh
+wp plugin install https://github.com/netmate1234/thessley-passkey/releases/latest/download/thessley-passkey-1.0.0.zip --activate
+```
+
+**Verify:** the login page shows the QR box.
+
+Requirements: PHP 8.3+, Drupal 10.3/11 or WordPress 6.0+.
 
 ## License
 
