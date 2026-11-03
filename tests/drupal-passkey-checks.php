@@ -5,7 +5,7 @@
  * (including the ?rest_route= request shape, real EC P-256 signatures, real
  * cookies and the real login form).
  *
- *   BASE=http://127.0.0.1:10190 SSH_HOST=<sandbox-host> DRUPAL_DIR='~/drupal-sandbox' \
+ *   BASE=http://127.0.0.1:10190 SSH_HOST=192.168.1.200 DRUPAL_DIR='~/drupal-sandbox' \
  *     php tests/drupal-passkey-checks.php
  *
  * (BASE is where this machine reaches the sandbox's web server; drush runs on
@@ -19,11 +19,7 @@
  */
 
 $base  = rtrim( getenv( 'BASE' ) ?: 'http://127.0.0.1:10190', '/' );
-$ssh   = getenv( 'SSH_HOST' );
-if ( ! $ssh ) {
-	fwrite( STDERR, "Set SSH_HOST to the sandbox machine that has drush (and BASE, DRUPAL_DIR).\n" );
-	exit( 2 );
-}
+$ssh   = getenv( 'SSH_HOST' ) ?: '192.168.1.200';
 $dir   = getenv( 'DRUPAL_DIR' ) ?: '~/drupal-sandbox';
 
 $bad = 0;
