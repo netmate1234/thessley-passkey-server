@@ -1,7 +1,12 @@
 # Thessley Passkey — server side (PHP)
 
-**Presentation:** [HTML slides](https://netmate1234.github.io/thessley-presentations/passkey-server/) · source [`docs/index.html`](docs/index.html)
+[![thessley-passkey-server — deck](docs/preview/slide-1.png)](https://netmate1234.github.io/thessley-presentations/passkey-server/)
 
+**Interactive deck:** [netmate1234.github.io/thessley-presentations/passkey-server](https://netmate1234.github.io/thessley-presentations/passkey-server/) — arrow keys or click the edges.
+
+| How it works | Trust model |
+|:---:|:---:|
+| [![How it works](docs/preview/slide-2.png)](https://netmate1234.github.io/thessley-presentations/passkey-server/#2) | [![Next](docs/preview/slide-1.png)](https://netmate1234.github.io/thessley-presentations/passkey-server/#1) |
 
 The PHP half of **Thessley Passkey Login**: sign in with a phone app (QR code
 or tap) instead of, or on top of, a password. Extracted from the Thessley
