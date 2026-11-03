@@ -1,5 +1,9 @@
 # Thessley Passkey — server side (PHP)
 
+![License](https://img.shields.io/badge/license-GPL--2.0--or--later-7c6cf0?style=flat-square) ![WordPress](https://img.shields.io/badge/WordPress-plugin-21759b?style=flat-square) ![Drupal](https://img.shields.io/badge/Drupal-10.3%20%2F%2011-0678be?style=flat-square) ![Deck](https://img.shields.io/badge/deck-slides-7c6cf0?style=flat-square)
+
+[![thessley-passkey-server](docs/preview/slide-1.png)](https://netmate1234.github.io/thessley-passkey-server/)
+
 The server half of the protocol in PHP: a WordPress reference implementation and a standalone Drupal module, speaking the same wire format.
 
 **Presentation:** [slides on GitHub Pages](https://netmate1234.github.io/thessley-passkey-server/)
