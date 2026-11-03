@@ -39,12 +39,15 @@ Drupal module is the cleaner, self-contained version of the same logic.
 
 ## Quick install
 
-Drupal:
+The Drupal modules live in their own repository:
+[thessley-passkey-drupal](https://github.com/netmate1234/thessley-passkey-drupal).
 
 ```sh
-git clone https://github.com/netmate1234/thessley-passkey-server.git
-cp -r thessley-passkey-server/drupal/thessley_passkey /path/to/drupal/web/modules/custom/
-drush en thessley_passkey
+git clone https://github.com/netmate1234/thessley-passkey-drupal.git /tmp/thessley-drupal
+cp -r /tmp/thessley-drupal/thessley_passkey        /path/to/drupal/web/modules/contrib/
+cp -r /tmp/thessley-drupal/thessley_windows_access /path/to/drupal/web/modules/contrib/
+drush en thessley_passkey thessley_windows_access
+drush cr
 ```
 
 WordPress: use the packaged plugin, which contains this module plus the helpers it needs:
@@ -55,7 +58,7 @@ wp plugin install https://github.com/netmate1234/thessley-passkey/releases/lates
 
 **Verify:** the login page shows the QR box.
 
-Requirements: PHP 8.3+, Drupal 10.3/11 or WordPress 6.0+.
+Requirements: PHP 8.3+, Drupal 10.6/11 or WordPress 6.0+.
 
 ## License
 
