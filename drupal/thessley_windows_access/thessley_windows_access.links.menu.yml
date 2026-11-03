@@ -1,0 +1,41 @@
+thessley_windows_access.admin:
+  title: 'Thessley Windows Access'
+  description: 'Manage enrolled Windows accounts and access policy.'
+  route_name: thessley_windows_access.admin
+  parent: system.admin_config_people
+  weight: 30
+
+thessley_windows_access.admin_landing:
+  title: 'Windows Access'
+  description: 'Manage Windows accounts, access groups, and resource rights.'
+  route_name: thessley_windows_access.dashboard
+  parent: system.admin
+  weight: 30
+
+thessley_windows_access.people:
+  title: 'Windows Access'
+  description: 'Manage enrolled Windows accounts, phone credentials, enrollment, groups, and access rights.'
+  route_name: thessley_windows_access.inventory
+  parent: entity.user.collection
+  weight: 50
+
+thessley_windows_access.enroll:
+  title: 'Enroll Windows account'
+  description: 'Create a PAM enrollment QR for one Windows account on one computer.'
+  route_name: thessley_windows_access.enroll
+  parent: thessley_windows_access.admin
+  weight: 10
+
+thessley_windows_access.policy:
+  title: 'Groups and resources'
+  description: 'Choose which Drupal roles can sign in to computers and access resources.'
+  route_name: thessley_windows_access.policy
+  parent: thessley_windows_access.admin
+  weight: 20
+
+thessley_windows_access.inventory:
+  title: 'PC inventory'
+  description: 'Review account and Windows local-group inventory reported by PCs.'
+  route_name: thessley_windows_access.inventory
+  parent: thessley_windows_access.admin
+  weight: 30

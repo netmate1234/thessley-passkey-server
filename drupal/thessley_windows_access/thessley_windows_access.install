@@ -1,0 +1,313 @@
+<?php
+
+/**
+ * @file
+ * Schema for distributed Windows access.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function thessley_windows_access_schema(): array {
+  $schema['thessley_win_machines'] = [
+    'description' => 'Enrolled Windows computers; one computer can have many Windows accounts.',
+    'fields' => [
+      'machine_id' => ['type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'binary' => TRUE],
+      'hostname' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE],
+      'status' => ['type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => 'active'],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'last_seen' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+      'revoked' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+    ],
+    'primary key' => ['machine_id'],
+    'indexes' => ['status' => ['status']],
+  ];
+
+  $schema['thessley_win_accounts'] = [
+    'description' => 'A Windows account binding on one computer, linked to one Drupal identity.',
+    'fields' => [
+      'id' => ['type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE],
+      'machine_id' => ['type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'binary' => TRUE],
+      'sid_hash' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'binary' => TRUE],
+      'username' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE],
+      'principal_type' => ['type' => 'varchar', 'length' => 16, 'not null' => TRUE, 'default' => 'local'],
+      'authority' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE, 'default' => ''],
+      'display_name' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE, 'default' => ''],
+      'uid' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'public_key' => ['type' => 'varchar', 'length' => 255, 'not null' => FALSE],
+      'status' => ['type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => 'pending'],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'last_seen' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+      'revoked' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => ['machine_sid' => ['machine_id', 'sid_hash']],
+    'indexes' => ['uid' => ['uid'], 'machine_user' => ['machine_id', 'username'], 'status' => ['status']],
+    'foreign keys' => [
+      'machine' => ['table' => 'thessley_win_machines', 'columns' => ['machine_id' => 'machine_id']],
+    ],
+  ];
+
+  $schema['thessley_win_phones'] = [
+    'description' => 'Phone approval keys enrolled for an individual Windows account on a computer.',
+    'fields' => [
+      'id' => ['type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE],
+      'account_id' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'credential_id' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'binary' => TRUE],
+      'public_key' => ['type' => 'varchar', 'length' => 255, 'not null' => TRUE],
+      'algorithm' => ['type' => 'varchar', 'length' => 16, 'not null' => TRUE, 'default' => 'ES256'],
+      'label' => ['type' => 'varchar', 'length' => 100, 'not null' => TRUE, 'default' => 'Phone'],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'last_used' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+      'revoked' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => ['credential_id' => ['credential_id']],
+    'indexes' => ['account_id' => ['account_id']],
+    'foreign keys' => [
+      'account' => ['table' => 'thessley_win_accounts', 'columns' => ['account_id' => 'id']],
+    ],
+  ];
+
+  $schema['thessley_win_account_groups'] = [
+    'description' => 'Windows local groups reported by the signed account agent.',
+    'fields' => [
+      'id' => ['type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE],
+      'account_id' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'group_sid_hash' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'binary' => TRUE],
+      'group_name' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE],
+      'observed' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => ['account_group' => ['account_id', 'group_sid_hash']],
+    'indexes' => ['account_id' => ['account_id']],
+    'foreign keys' => [
+      'account' => ['table' => 'thessley_win_accounts', 'columns' => ['account_id' => 'id']],
+    ],
+  ];
+
+  $schema['thessley_win_requests'] = [
+    'description' => 'Short-lived PAM phone enrollment and Windows sign-in approvals.',
+    'fields' => [
+      'request_id' => ['type' => 'varchar', 'length' => 43, 'not null' => TRUE, 'binary' => TRUE],
+      'account_id' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'type' => ['type' => 'varchar', 'length' => 10, 'not null' => TRUE],
+      'nonce' => ['type' => 'varchar', 'length' => 43, 'not null' => TRUE],
+      'client_nonce' => ['type' => 'varchar', 'length' => 43, 'not null' => FALSE, 'binary' => TRUE],
+      'protocol_version' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 1],
+      'logon_context' => ['type' => 'varchar', 'length' => 24, 'not null' => TRUE, 'default' => ''],
+      'status' => ['type' => 'varchar', 'length' => 10, 'not null' => TRUE, 'default' => 'pending'],
+      'phone_id' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'expires' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'resolved' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+    ],
+    'primary key' => ['request_id'],
+    'unique keys' => ['account_client_nonce' => ['account_id', 'client_nonce']],
+    'indexes' => ['status_expires' => ['status', 'expires'], 'account_id' => ['account_id']],
+    'foreign keys' => [
+      'account' => ['table' => 'thessley_win_accounts', 'columns' => ['account_id' => 'id']],
+      'phone' => ['table' => 'thessley_win_phones', 'columns' => ['phone_id' => 'id']],
+    ],
+  ];
+
+  $schema['thessley_win_pairings'] = [
+    'description' => 'Short-lived, single-use Windows PC enrollment codes bound to an administrator-selected client IP and Drupal identity.',
+    'fields' => [
+      'code_hash' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'binary' => TRUE],
+      'client_ip' => ['type' => 'varchar', 'length' => 45, 'not null' => TRUE],
+      'username' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE, 'binary' => TRUE],
+      'principal_type' => ['type' => 'varchar', 'length' => 16, 'not null' => TRUE, 'default' => 'local'],
+      'authority' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE, 'default' => ''],
+      'uid' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'status' => ['type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => 'pending'],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'expires' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'used' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE],
+    ],
+    'primary key' => ['code_hash'],
+    'indexes' => ['status_expires' => ['status', 'expires'], 'client_user' => ['client_ip', 'username']],
+  ];
+
+  $schema['thessley_win_resources'] = [
+    'description' => 'Protected resources that enforce Thessley Windows Access policy.',
+    'fields' => [
+      'id' => ['type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE],
+      'machine_name' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'binary' => TRUE],
+      'label' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE],
+      'type' => ['type' => 'varchar', 'length' => 32, 'not null' => TRUE],
+      'machine_id' => ['type' => 'varchar', 'length' => 32, 'not null' => FALSE, 'binary' => TRUE],
+      'status' => ['type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => 'active'],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => ['machine_name' => ['machine_name']],
+    'indexes' => ['status' => ['status'], 'machine_id' => ['machine_id']],
+  ];
+
+  $schema['thessley_win_grants'] = [
+    'description' => 'Drupal role grants for resources and Windows actions.',
+    'fields' => [
+      'id' => ['type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE],
+      'role_id' => ['type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'binary' => TRUE],
+      'resource_id' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'action' => ['type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'binary' => TRUE],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'changed_by' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => ['role_resource_action' => ['role_id', 'resource_id', 'action']],
+    'indexes' => ['role_id' => ['role_id'], 'resource_id' => ['resource_id']],
+    'foreign keys' => [
+      'resource' => ['table' => 'thessley_win_resources', 'columns' => ['resource_id' => 'id']],
+    ],
+  ];
+
+  $schema['thessley_win_audit'] = [
+    'description' => 'Audit records for Windows account, enrollment, and access-policy changes.',
+    'fields' => [
+      'id' => ['type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE],
+      'actor_uid' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+      'event' => ['type' => 'varchar', 'length' => 48, 'not null' => TRUE],
+      'target' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE],
+      'details' => ['type' => 'text', 'size' => 'medium', 'not null' => TRUE],
+      'created' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+    ],
+    'primary key' => ['id'],
+    'indexes' => ['actor_uid' => ['actor_uid'], 'event' => ['event'], 'created' => ['created']],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function thessley_windows_access_install(): void {
+  // This Drupal instance is the dedicated Windows Access console. Route its
+  // default front page to the protected tool dashboard instead of Drupal's
+  // empty-site "Welcome" page.
+  $site = \Drupal::configFactory()->getEditable('system.site');
+  if ($site->get('page.front') === '/node') {
+    $site->set('page.front', '/admin/thessley-windows-access')->save();
+  }
+
+  $roles = \Drupal::entityTypeManager()->getStorage('user_role');
+  $administrator = $roles->load('administrator');
+  if ($administrator && !$administrator->hasPermission('administer thessley windows access')) {
+    $administrator->grantPermission('administer thessley windows access');
+    $administrator->save();
+  }
+  $role = $roles->load('windows_administrators');
+  if (!$role) {
+    $role = \Drupal\user\Entity\Role::create([
+      'id' => 'windows_administrators',
+      'label' => 'Windows Administrators',
+    ]);
+    $role->grantPermission('use thessley windows access');
+    $role->save();
+  }
+  $test_role = $roles->load('windows_login_test');
+  if (!$test_role) {
+    $test_role = \Drupal\user\Entity\Role::create([
+      'id' => 'windows_login_test',
+      'label' => 'Windows Login Test',
+    ]);
+    $test_role->grantPermission('use thessley windows access');
+    $test_role->save();
+  }
+  $db = \Drupal::database();
+  $db->merge('thessley_win_resources')
+    ->key('machine_name', 'all_windows')
+    ->fields([
+      'label' => 'All enrolled Windows computers',
+      'type' => 'computer_group',
+      'status' => 'active',
+    ])
+    ->insertFields([
+      'machine_name' => 'all_windows',
+      'label' => 'All enrolled Windows computers',
+      'type' => 'computer_group',
+      'status' => 'active',
+      'created' => \Drupal::time()->getRequestTime(),
+    ])
+    ->execute();
+  $resource_id = (int) $db->select('thessley_win_resources', 'r')
+    ->fields('r', ['id'])
+    ->condition('machine_name', 'all_windows')
+    ->execute()
+    ->fetchField();
+  foreach (['windows.login', 'windows.local_admin'] as $action) {
+    $db->merge('thessley_win_grants')
+      ->key('role_id', 'windows_administrators')
+      ->key('resource_id', (int) $resource_id)
+      ->key('action', $action)
+      ->fields(['changed_by' => 1])
+      ->insertFields([
+        'role_id' => 'windows_administrators',
+        'resource_id' => (int) $resource_id,
+        'action' => $action,
+        'changed_by' => 1,
+        'created' => \Drupal::time()->getRequestTime(),
+      ])
+      ->execute();
+  }
+
+  // The pilot role is intentionally created without any grants. An admin
+  // must add only the test computer's Windows sign-in action in the policy UI.
+}
+
+/**
+ * Route the default front page to the Windows Access dashboard.
+ */
+function thessley_windows_access_update_10001(): string {
+  $site = \Drupal::configFactory()->getEditable('system.site');
+  if ($site->get('page.front') === '/node') {
+    $site->set('page.front', '/admin/thessley-windows-access')->save();
+  }
+  return 'Routed the default Drupal welcome page to the protected Windows Access dashboard.';
+}
+
+/**
+ * Add one-time PC pairing codes used by the streamlined enrollment flow.
+ */
+function thessley_windows_access_update_10002(): string {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('thessley_win_pairings')) {
+    $definitions = thessley_windows_access_schema();
+    $schema->createTable('thessley_win_pairings', $definitions['thessley_win_pairings']);
+  }
+  return 'Added the short-lived Windows PC enrollment pairing store.';
+}
+
+/**
+ * Add namespaced Windows principals and versioned logon context to requests.
+ */
+function thessley_windows_access_update_10003(): string {
+  $schema = \Drupal::database()->schema();
+  $definitions = thessley_windows_access_schema();
+  foreach ([
+    'thessley_win_accounts' => ['principal_type', 'authority'],
+    'thessley_win_requests' => ['protocol_version', 'logon_context'],
+    'thessley_win_pairings' => ['principal_type', 'authority'],
+  ] as $table => $fields) {
+    foreach ($fields as $field) {
+      if ($schema->tableExists($table) && !$schema->fieldExists($table, $field)) {
+        $schema->addField($table, $field, $definitions[$table]['fields'][$field]);
+      }
+    }
+  }
+  if ($schema->tableExists('thessley_win_pairings')) {
+    $schema->changeField('thessley_win_pairings', 'username', 'username', $definitions['thessley_win_pairings']['fields']['username']);
+  }
+  return 'Added scoped Windows principal identities and signed logon-context metadata.';
+}
+
+/**
+ * Implements hook_cron().
+ */
+function thessley_windows_access_cron(): void {
+  $store = \Drupal::service('thessley_windows_access.store');
+  $store->pruneExpiredRequests();
+  $store->pruneExpiredPairings();
+}
