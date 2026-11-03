@@ -48,7 +48,7 @@ optional TPM 2.0 attestation step (vendor roots ship with each implementation).
 ## Related
 
 - [Thessley](https://github.com/netmate1234/Thessley) — the project family and overview
-- [thessley-passkey](https://github.com/netmate1234/thessley-passkey-wordpress) — WordPress plugin
+- [thessley-passkey-wordpress](https://github.com/netmate1234/thessley-passkey-wordpress) — WordPress plugin
 - [thessley-passkey-drupal](https://github.com/netmate1234/thessley-passkey-drupal) — Drupal modules
 - [thessley-passkey-linux](https://github.com/netmate1234/thessley-passkey-linux) — desktop approver
 
