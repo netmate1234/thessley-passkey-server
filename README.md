@@ -1,5 +1,8 @@
 # Thessley Passkey — server side (PHP)
 
+**Presentation:** [HTML slides](https://netmate1234.github.io/thessley-presentations/passkey-server/) · source [`docs/index.html`](docs/index.html)
+
+
 The PHP half of **Thessley Passkey Login**: sign in with a phone app (QR code
 or tap) instead of, or on top of, a password. Extracted from the Thessley
 Security Hardening WordPress plugin and its Drupal port.
