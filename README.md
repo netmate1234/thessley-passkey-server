@@ -15,7 +15,7 @@ server repositories below.
 
 | Server | Repository | Install |
 | --- | --- | --- |
-| WordPress | [`thessley-passkey`](https://github.com/netmate1234/thessley-passkey) | [`wp plugin install …`](https://github.com/netmate1234/thessley-passkey#quick-install) |
+| WordPress | [`thessley-passkey-wordpress`](https://github.com/netmate1234/thessley-passkey-wordpress) | [`wp plugin install …`](https://github.com/netmate1234/thessley-passkey-wordpress#quick-install) |
 | Drupal 10.6 / 11 | [`thessley-passkey-drupal`](https://github.com/netmate1234/thessley-passkey-drupal) | [copy the module folders](https://github.com/netmate1234/thessley-passkey-drupal#quick-install) |
 
 Both speak the same wire format, so the same Android app and desktop approver
@@ -48,7 +48,7 @@ optional TPM 2.0 attestation step (vendor roots ship with each implementation).
 ## Related
 
 - [Thessley](https://github.com/netmate1234/Thessley) — the project family and overview
-- [thessley-passkey](https://github.com/netmate1234/thessley-passkey) — WordPress plugin
+- [thessley-passkey](https://github.com/netmate1234/thessley-passkey-wordpress) — WordPress plugin
 - [thessley-passkey-drupal](https://github.com/netmate1234/thessley-passkey-drupal) — Drupal modules
 - [thessley-passkey-linux](https://github.com/netmate1234/thessley-passkey-linux) — desktop approver
 
