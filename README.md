@@ -1,66 +1,57 @@
-# Thessley Passkey — server side (PHP)
+# Thessley Passkey — protocol reference
 
-![License](https://img.shields.io/badge/license-GPL--2.0--or--later-7c6cf0?style=flat-square) ![WordPress](https://img.shields.io/badge/WordPress-plugin-21759b?style=flat-square) ![Drupal](https://img.shields.io/badge/Drupal-10.3%20%2F%2011-0678be?style=flat-square) ![Deck](https://img.shields.io/badge/deck-7c6cf0?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0--or--later-7c6cf0?style=flat-square) ![Protocol](https://img.shields.io/badge/PROTOCOL.md-v1-7c6cf0?style=flat-square) ![PHP](https://img.shields.io/badge/PHP-8.3%2B-777bb4?style=flat-square) ![Deck](https://img.shields.io/badge/deck-7c6cf0?style=flat-square)
 
 [![banner](docs/preview/hero.png)](https://netmate1234.github.io/thessley-passkey-server/)
 
-The server half of the protocol in PHP: a WordPress reference implementation and a standalone Drupal module, speaking the same wire format.
+The wire protocol behind Thessley Passkey: how a site asks a phone to approve a
+login, what the phone signs, and how the site verifies it. This repository is the
+**specification and implementer notes** — the running code lives in the two
+server repositories below.
 
 **Presentation:** [interactive deck](https://netmate1234.github.io/thessley-passkey-server/)
 
-- Start with `PROTOCOL.md` if you are building another client (e.g. iOS).
-- A request carries a type, id, nonce, origin and a 120-second life; the answer is ECDSA P-256 over a pipe-joined string.
-- The server verifies the enrolled key, the timestamp and the origin, then consumes the request exactly once.
-- Both servers can verify that a key lives in a TPM 2.0 chip, using the vendor roots shipped next to each module.
+## Implementations
 
-The PHP half of **Thessley Passkey Login**: sign in with a phone app (QR code
-or tap) instead of, or on top of, a password. Extracted from the Thessley
-Security Hardening WordPress plugin and its Drupal port.
+| Server | Repository | Install |
+| --- | --- | --- |
+| WordPress | [`thessley-passkey`](https://github.com/netmate1234/thessley-passkey) | [`wp plugin install …`](https://github.com/netmate1234/thessley-passkey#quick-install) |
+| Drupal 10.6 / 11 | [`thessley-passkey-drupal`](https://github.com/netmate1234/thessley-passkey-drupal) | [copy the module folders](https://github.com/netmate1234/thessley-passkey-drupal#quick-install) |
+
+Both speak the same wire format, so the same Android app and desktop approver
+work with either.
+
+## The protocol in short
+
+- A request carries a type (`login` / `enroll`), id, nonce, origin and a 120-second life.
+- The answer is ECDSA P-256 over a pipe-joined string: version, type, id, origin, nonce, time, action.
+- The server verifies the enrolled public key, the timestamp (within 60 s) and the origin, then consumes the request exactly once.
+- No shared secret is stored; the server keeps public keys only.
+
+Read [`PROTOCOL.md`](PROTOCOL.md) for the exact fields, error codes and the
+optional TPM 2.0 attestation step (vendor roots ship with each implementation).
+
+## What is in this repository
 
 | Path | What it is |
-|---|---|
-| `PROTOCOL.md` | The wire protocol — start here if you are building a client (e.g. iOS). |
-| `wordpress/passkey-login/` | The WordPress module (reference implementation). Needs the plugin's helper functions (`thessley_client_ip`, `thessley_log_event`, `Thessley_UI`), so it is read-only reference here, not runnable on its own. |
-| `wordpress/assets/` | QR code renderer (SVG) and the bundled MIT-licensed `qrcode-generator`. |
-| `drupal/thessley_passkey/` | Standalone Drupal 10.6 / 11 module (see its own README). |
-| `tests/` | `passkey-login*-checks.php` (WordPress, run with WP-CLI on a dev site) and `drupal-passkey-checks.php` (end-to-end over HTTP against a Drupal **sandbox**). Never run these against a live site. |
+| --- | --- |
+| `PROTOCOL.md` | The complete wire format — start here to build another client (e.g. iOS). |
+| `docs/index.html` | The interactive deck served on GitHub Pages. |
 
-The two servers behave the same for the app. They differ only in the login
-page around it: in "app only" mode WordPress asks for the username first and
-falls back to the password form for an account with no device, while Drupal
-hides the password form and keeps `?thessley_password=1` as the way back to it.
+## Building another client
 
-Both servers can also verify that a key lives in a **TPM 2.0 chip** (optional, see the end of
-`PROTOCOL.md`); the Intel root certificate for that ships next to each module in `tpm-roots/`.
+1. Read `PROTOCOL.md` end to end; the version and domain-separation strings are fixed.
+2. Implement the signed string exactly; a single separator difference fails verification.
+3. Use the checks in the implementation repositories as your reference before pointing at a live site.
+4. Never run the end-to-end checks against production.
 
-Start with `PROTOCOL.md`, then `wordpress/passkey-login/class-crypto.php`
-(the signed string and verification) and `module.php` (the endpoints). The
-Drupal module is the cleaner, self-contained version of the same logic.
+## Related
 
-## Quick install
-
-The Drupal modules live in their own repository:
-[thessley-passkey-drupal](https://github.com/netmate1234/thessley-passkey-drupal).
-
-```sh
-git clone https://github.com/netmate1234/thessley-passkey-drupal.git /tmp/thessley-drupal
-cp -r /tmp/thessley-drupal/thessley_passkey        /path/to/drupal/web/modules/contrib/
-cp -r /tmp/thessley-drupal/thessley_windows_access /path/to/drupal/web/modules/contrib/
-drush en thessley_passkey thessley_windows_access
-drush cr
-```
-
-WordPress: use the packaged plugin, which contains this module plus the helpers it needs:
-
-```sh
-wp plugin install https://github.com/netmate1234/thessley-passkey/releases/latest/download/thessley-passkey-1.0.0.zip --activate
-```
-
-**Verify:** the login page shows the QR box.
-
-Requirements: PHP 8.3+, Drupal 10.6/11 or WordPress 6.0+.
+- [Thessley](https://github.com/netmate1234/Thessley) — the project family and overview
+- [thessley-passkey](https://github.com/netmate1234/thessley-passkey) — WordPress plugin
+- [thessley-passkey-drupal](https://github.com/netmate1234/thessley-passkey-drupal) — Drupal modules
+- [thessley-passkey-linux](https://github.com/netmate1234/thessley-passkey-linux) — desktop approver
 
 ## License
 
-GPL-2.0-or-later, like the WordPress plugin they come from. The bundled
-QR library keeps its own MIT license (`wordpress/assets/vendor/`).
+GPL-2.0-or-later.

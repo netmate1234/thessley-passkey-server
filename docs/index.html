@@ -99,8 +99,8 @@
   <section class="slide on" data-t="Title">
     <div class="kicker">thessley-passkey-server</div>
     <h1>The server half<br><span class="grad">of the protocol.</span></h1>
-    <p class="lead">PHP: request, nonce, signed answer, verification. A reference implementation for WordPress and a standalone Drupal module, both speaking the same wire format.</p>
-    <div class="chips"><span class="chip"><b>PROTOCOL.md</b> · the wire format</span><span class="chip"><b>WordPress</b> · reference</span><span class="chip"><b>Drupal</b> · standalone</span><span class="chip"><b>TPM</b> · optional proof</span></div>
+    <p class="lead">Request, nonce, signed answer, verification — the wire format in one document. The WordPress and Drupal implementations live in their own repositories.</p>
+    <div class="chips"><span class="chip"><b>PROTOCOL.md</b> · the wire format</span><span class="chip"><b>WordPress</b> · plugin</span><span class="chip"><b>Drupal</b> · module</span><span class="chip"><b>TPM</b> · optional proof</span></div>
     <div class="foot"><span>thessley</span><span class="mono">build a client from PROTOCOL.md</span></div>
   </section>
 
@@ -118,14 +118,14 @@
 
   <section class="slide" data-t="Two servers">
     <div class="kicker">Two servers</div>
-    <h2>Same protocol, different page around it</h2>
+    <h2>One protocol, two implementations</h2>
     <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:26px">
       <div class="card"><h3>WordPress</h3><ul class="clean" style="font-size:16px">
-        <li>Reference implementation inside the plugin.</li>
+        <li>Maintained in <a href="https://github.com/netmate1234/thessley-passkey">thessley-passkey</a>.</li>
         <li>“App only” asks for the username first, then falls back to the password form for an account with no device.</li>
         <li>Three modes: optional, 2FA, app-only.</li></ul></div>
-      <div class="card"><h3>Drupal 10.3 / 11</h3><ul class="clean" style="font-size:16px">
-        <li>Standalone module, cleaner and self-contained.</li>
+      <div class="card"><h3>Drupal 10.6 / 11</h3><ul class="clean" style="font-size:16px">
+        <li>Maintained in <a href="https://github.com/netmate1234/thessley-passkey-drupal">thessley-passkey-drupal</a>.</li>
         <li>Hides the password form in app-only; <span class="mono">?thessley_password=1</span> is the way back.</li>
         <li>Same endpoints, same signatures.</li></ul></div>
     </div>
@@ -147,15 +147,15 @@
   <section class="slide" data-t="Code map">
     <div class="kicker">Code map</div>
     <h2>Where to look</h2>
-        <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:24px"><div class="card"><h3>PROTOCOL.md</h3><p>Start here to build another client, e.g. iOS.</p></div><div class="card"><h3>wordpress/passkey-login/</h3><p>The reference module: endpoints, crypto, store.</p></div><div class="card"><h3>wordpress/assets/</h3><p>Local QR renderer; bundled MIT qrcode-generator.</p></div><div class="card"><h3>drupal/thessley_passkey/</h3><p>The standalone Drupal module.</p></div><div class="card"><h3>tests/</h3><p>WordPress WP-CLI checks and Drupal end-to-end HTTP.</p></div><div class="card"><h3>class-crypto.php</h3><p>The signed string and verification.</p></div></div>
+        <div class="grid" style="grid-template-columns:repeat(2,1fr);margin-top:24px"><div class="card"><h3>PROTOCOL.md</h3><p>The wire format: fields, signed string, error codes, TPM step.</p></div><div class="card"><h3>docs/</h3><p>This deck and the Pages assets.</p></div><div class="card"><h3>thessley-passkey</h3><p>The WordPress plugin: endpoints, crypto, store.</p></div><div class="card"><h3>thessley-passkey-drupal</h3><p>The Drupal modules, self-contained.</p></div></div>
     <div class="foot"><span>thessley</span><span class="mono">GPL-2.0-or-later</span></div>
   </section>
 
   <section class="slide" data-t="Close">
     <div class="kicker">thessley-passkey-server</div>
     <h1>A small protocol<br><span class="grad">any client can speak.</span></h1>
-    <p class="lead">One documented wire format, two server implementations, a reference app on Android and a desktop approver.</p>
-    <div class="chips"><span class="chip"><b>PROTOCOL.md</b></span><span class="chip"><b>WordPress</b></span><span class="chip"><b>Drupal</b></span><span class="chip"><b>Tests</b></span></div>
+    <p class="lead">One documented wire format, two implementations, a reference app on Android and a desktop approver.</p>
+    <div class="chips"><span class="chip"><b>PROTOCOL.md</b></span><span class="chip"><b>WordPress</b></span><span class="chip"><b>Drupal</b></span><span class="chip"><b>Clients</b></span></div>
     <div class="foot"><span>thessley</span><span class="mono">possession · approval · attestation</span></div>
   </section>
 </div></div>
