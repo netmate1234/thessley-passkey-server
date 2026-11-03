@@ -1,5 +1,16 @@
 # Thessley Passkey — server side (PHP)
 
+The server half of the protocol in PHP: a WordPress reference implementation and a standalone Drupal module, speaking the same wire format.
+
+**Presentation:** [slides on GitHub Pages](https://netmate1234.github.io/thessley-presentations/passkey-server/)
+
+- Start with `PROTOCOL.md` if you are building another client (e.g. iOS).
+- A request carries a type, id, nonce, origin and a 120-second life; the answer is ECDSA P-256 over a pipe-joined string.
+- The server verifies the enrolled key, the timestamp and the origin, then consumes the request exactly once.
+- Both servers can verify that a key lives in a TPM 2.0 chip, using the vendor roots shipped next to each module.
+
+![What every request carries](docs/preview/slide-2.png)
+
 [![thessley-passkey-server — deck](docs/preview/slide-1.png)](https://netmate1234.github.io/thessley-presentations/passkey-server/)
 
 **Interactive deck:** [netmate1234.github.io/thessley-presentations/passkey-server](https://netmate1234.github.io/thessley-presentations/passkey-server/) — arrow keys or click the edges.
