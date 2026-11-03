@@ -22,7 +22,7 @@ Security Hardening WordPress plugin and its Drupal port.
 | `PROTOCOL.md` | The wire protocol — start here if you are building a client (e.g. iOS). |
 | `wordpress/passkey-login/` | The WordPress module (reference implementation). Needs the plugin's helper functions (`thessley_client_ip`, `thessley_log_event`, `Thessley_UI`), so it is read-only reference here, not runnable on its own. |
 | `wordpress/assets/` | QR code renderer (SVG) and the bundled MIT-licensed `qrcode-generator`. |
-| `drupal/thessley_passkey/` | Standalone Drupal 10.3 / 11 module (see its own README). |
+| `drupal/thessley_passkey/` | Standalone Drupal 10.6 / 11 module (see its own README). |
 | `tests/` | `passkey-login*-checks.php` (WordPress, run with WP-CLI on a dev site) and `drupal-passkey-checks.php` (end-to-end over HTTP against a Drupal **sandbox**). Never run these against a live site. |
 
 The two servers behave the same for the app. They differ only in the login
